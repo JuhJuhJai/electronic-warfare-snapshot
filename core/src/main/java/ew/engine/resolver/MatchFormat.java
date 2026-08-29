@@ -1,0 +1,21 @@
+package ew.engine.resolver;
+
+public enum MatchFormat {
+    STANDARD,
+    IMPROVISED,
+    BESTOF3,
+    CUSTOM, SINGLEPLAYER, // is a part of custom
+    PUZZLE,
+    LESSDECISIVE,
+    SCRAPEDTOGETHER,
+    SUPPORTED,
+    CIVILWARFARE,
+    WORLDFIELD,
+    WILDFIELD,
+    FULLWARFARE,
+    ENTRENCHED,
+    LAWFUNENGAGEMENT,
+    HIDDENWARFARE,
+    FLASHBACK,
+    ALLTHEDECISIVENESS
+}

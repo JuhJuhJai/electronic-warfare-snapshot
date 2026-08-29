@@ -1,0 +1,20 @@
+[compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
+eclipse.project.name = appName + '-core'
+
+dependencies {
+  api "com.badlogicgames.gdx:gdx-ai:$aiVersion"
+  api "com.badlogicgames.gdx:gdx:$gdxVersion"
+  api "com.github.MrStahlfelge.gdx-websockets:core:$websocketVersion"
+  api "com.github.tommyettinger:digital:$digitalVersion"
+  api "com.github.tommyettinger:formic:$formicVersion"
+  api "com.github.tommyettinger:juniper:$juniperVersion"
+  api "com.github.tommyettinger:libgdx-texturepacker:$texturePackerOnlyVersion"
+  api "com.github.tommyettinger:libgdx-textureunpacker:$textureUnpackerOnlyVersion"
+  api "com.sudoplay.joise:joise:$joiseVersion"
+  api "de.tomgrill.gdxdialogs:gdx-dialogs-core:$dialogsVersion"
+  api "space.earlygrey:shapedrawer:$shapeDrawerVersion"
+
+  if(enableGraalNative == 'true') {
+    implementation "io.github.berstanio:gdx-svmhelper-annotations:$graalHelperVersion"
+  }
+}

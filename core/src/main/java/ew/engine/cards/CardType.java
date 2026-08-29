@@ -1,0 +1,9 @@
+package ew.engine.cards;
+
+public enum CardType {
+    ATTACK, PRODUCTION,
+    DECISIVEATTACK, DECISIVEPRODUCTION,
+    TOKENATTACK, TOKENPRODUCTION,
+
+    ZONE, COMMANDER
+}
