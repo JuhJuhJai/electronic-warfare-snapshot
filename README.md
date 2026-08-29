@@ -1,14 +1,15 @@
-# Electronic Warfare
+# Electronic Warfare Snapshot
 
 A [libGDX](https://libgdx.com/) project generated with [gdx-liftoff](https://github.com/libgdx/gdx-liftoff).
 
 This project was generated with a template including simple application launchers and a main class extending `Game` that sets the first screen.
 
+This snapshot contains information that was updated (August 28th, 2026). Currently, the game cannot run. No GUI has been defined yet, so this stands purely as an example of code I've written thus far, and not as a project. I would recommend looking at [Engine](https://github.com/JuhJuhJai/electronic-warfare-snapshot/blob/main/core/src/main/java/ew/engine/resolver/Engine.java) for that view. 
+
+My IDE is IntelliJ IDEA. 
 
 ## Documents
-This game was made using rules from this [document](https://docs.google.com/document/d/1SiZaZUJU2aiVstrVPI6lUHv41mXre5qFFRzWFt9wrsY/edit?tab=t.0/).
 - [Reference Sheet](https://docs.google.com/document/d/19DS2LbG061Gx649yVb4Ibzd81kmOYZEYzPr1OzUAi7c/edit?tab=t.0), for use during play. 
-- Video tutorial (Incomplete)
 
 ## Platforms
 
