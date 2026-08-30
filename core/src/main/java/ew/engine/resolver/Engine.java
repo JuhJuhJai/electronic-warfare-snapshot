@@ -43,7 +43,7 @@ public class Engine { // Engine, along with VariableGameNum, should be the only 
 
         // Both players draw 4 cards, and may retry.
         systemChange(EffectChangeType.Draw4OrRetry);
-        state.gameGoing = true;
+        systemChange(EffectChangeType.MatchStart);
 
         // Game Begins.
         while(state.gameGoing) {
@@ -107,16 +107,13 @@ public class Engine { // Engine, along with VariableGameNum, should be the only 
         );
     }
 
-    /**
-     * Abbreviation for resolveGameChoice with zero strength and no target.
-     */
     private void systemChange(EffectChangeType changeType) {
         final EffectChangeInstance effectChange = new EffectChangeInstance(EffectChange.system(changeType), null, state.getEffectID(), null);
         resolveGameChange(List.of(List.of(
                 new GameChoiceChange(
                     effectChange,
                     (List<LivingObject>) null,
-                    null))),
+                    List.of()))),
             getActiveOptionalContinuous(effectChange, getActiveConstantContinuous()));
     }
 
@@ -126,7 +123,7 @@ public class Engine { // Engine, along with VariableGameNum, should be the only 
                 new GameChoiceChange(
                     effectChange,
                     List.of(target),
-                    null))),
+                    List.of()))),
             getActiveOptionalContinuous(effectChange, getActiveConstantContinuous()));
     }
 
@@ -136,7 +133,7 @@ public class Engine { // Engine, along with VariableGameNum, should be the only 
                 new GameChoiceChange(
                     effectChange,
                     targets,
-                    null))),
+                    List.of()))),
             getActiveOptionalContinuous(effectChange, getActiveConstantContinuous()));
     }
 
@@ -148,6 +145,12 @@ public class Engine { // Engine, along with VariableGameNum, should be the only 
                     targets,
                     choiceInfo))),
             getActiveOptionalContinuous(effectChange, getActiveConstantContinuous()));
+    }
+
+    private void systemChange(GameChoiceChange change) {
+        resolveGameChange(List.of(List.of(
+            change)),
+            getActiveOptionalContinuous(change.getChange(), getActiveConstantContinuous()));
     }
 
     /**
@@ -204,7 +207,17 @@ public class Engine { // Engine, along with VariableGameNum, should be the only 
 
                 if (effectChange.getOwner() == null) { // It's the match making the change.
                     switch (effectChange.getType()) {
+                        case MatchStart -> {
+                            state.gameGoing = true;
 
+                            eventList.add(new GameEvent(state, effectChange));
+                        }
+
+                        case MatchEnd -> {
+                            state.gameGoing = false;
+
+                            eventList.add(new GameEvent(state, effectChange));
+                        }
 
                         case DrawPhaseDraw -> {
                             // Doesn't draw on the first turn
@@ -242,31 +255,11 @@ public class Engine { // Engine, along with VariableGameNum, should be the only 
                             state.setTimingPoint(TimingPoint.B0);
                             eventList.add(new GameEvent(state, effectChange));
 
-                            for (LivingObject obj : state.getLivingObjects()) {
+                            // Frozen Counter Removal
+                            systemChange(EffectChangeType.FrozenRemoval, state.getLivingObjects(l -> l.hasCounter(CounterType.Frozen)), List.of(1));
 
-                                // Frozen Counter Removal
-                                if (obj.getCounters().contains(CounterType.Frozen)) {
-                                    systemChange(EffectChangeType.FrozenRemoval, List.of(obj), List.of(1));
-                                }
-
-                                // Ethereal Doubling. Displacement is handled by ResolveAfterChange.
-                                if (obj.getCounters().contains(CounterType.Ethereal)) {
-                                    final int originalEthereal = Math.toIntExact(obj.getCounters().stream().filter(counter -> counter == CounterType.Ethereal).count());
-                                    obj.addCounter(CounterType.Ethereal, originalEthereal);
-                                    final int newEthereal = Math.toIntExact(obj.getCounters().stream().filter(counter -> counter == CounterType.Ethereal).count());
-
-                                    eventList.add(new GameEvent(state,
-                                        effectChange.returnAndSetTypeAndStrengthInstance(EffectChangeType.EtherealDouble, VariableGameNum.Num(originalEthereal)),
-                                        obj,
-                                        List.of(
-                                            originalEthereal, // Original number of Ethereal Counters
-                                            newEthereal // New number of Ethereal Counters
-                                        ),
-                                        obj.getCommanderOneVis(),
-                                        obj.getCommanderTwoVis()
-                                    ));
-                                }
-                            }
+                            // Ethereal Doubling. Displacement is handled by ResolveAfterChange.
+                            systemChange(EffectChangeType.EtherealDouble, state.getLivingObjects(l -> l.hasCounter(CounterType.Ethereal)), List.of());
 
                             resolveTriggerChains();
                         }
@@ -283,6 +276,25 @@ public class Engine { // Engine, along with VariableGameNum, should be the only 
                                     List.of(
                                         originalFrozenCounters, // Original number of Frozen Counters
                                         frozenCounters // New number of Frozen Counters
+                                    ),
+                                    obj.getCommanderOneVis(),
+                                    obj.getCommanderTwoVis()
+                                ));
+                            }
+                        }
+
+                        case EtherealDouble -> {
+                            for (LivingObject obj : changeTargets) {
+                                final int originalEthereal = Math.toIntExact(obj.getCounters().stream().filter(counter -> counter == CounterType.Ethereal).count());
+                                obj.addCounter(CounterType.Ethereal, originalEthereal);
+                                final int newEthereal = Math.toIntExact(obj.getCounters().stream().filter(counter -> counter == CounterType.Ethereal).count());
+
+                                eventList.add(new GameEvent(state,
+                                    effectChange.returnAndSetTypeAndStrengthInstance(EffectChangeType.EtherealDouble, VariableGameNum.Num(originalEthereal)),
+                                    obj,
+                                    List.of(
+                                        originalEthereal, // Original number of Ethereal Counters
+                                        newEthereal // New number of Ethereal Counters
                                     ),
                                     obj.getCommanderOneVis(),
                                     obj.getCommanderTwoVis()
@@ -323,11 +335,7 @@ public class Engine { // Engine, along with VariableGameNum, should be the only 
                             eventList.add(new GameEvent(state, effectChange));
 
                             // Flame Counters
-                            for (LivingObject obj : state.getLivingObjects()) {
-                                if (obj.getCounters().contains(CounterType.Flame)) {
-                                    systemChange(EffectChangeType.FlameRemoval, List.of(obj));
-                                }
-                            }
+                            systemChange(EffectChangeType.FlameRemoval, state.getLivingObjects(l -> l.hasCounter(CounterType.Flame)));
 
                             resolveTriggerChains();
                         }
@@ -378,27 +386,26 @@ public class Engine { // Engine, along with VariableGameNum, should be the only 
                             eventList.add(new GameEvent(state, effectChange));
 
                             // Aftermath Discard
-                            List<GameChoiceChange> discards = new ArrayList<>();
                             for (CommanderInstance commander : state.getCommanders()) {
-                                final int maxHandSize = 6 + activeContinuous.stream()
-                                    .filter(candidate -> candidate.getTypeInstance() == EffectChangeType.IncreaseHandSize && candidate.getUser().getUser() == commander.getUser())
-                                    .mapToInt(candidate -> candidate.getStrength().getValue(state, sideIDtoController(commander.getSide()), candidate, activeContinuous))
-                                    .sum();
+                                final int maxHandSize = getMaxHandSize(commander, activeContinuous);
                                 final int currentSize = commander.getHand().size();
                                 if (currentSize > maxHandSize) {
-                                    discards.add(
+                                    systemChange(
                                         getPlayerChangeChoice(
                                             sideIDtoController(commander.getSide()),
-                                            getChoices(effectChange.returnAndSetTypeAndStrengthInstance(EffectChangeType.AftermathDiscard, VariableGameNum.Num(currentSize - maxHandSize)), activeContinuous)
-                                        ).get(0));
+                                            getChoices(effectChange.returnAndSetTypeAndStrengthInstance(
+                                                EffectChangeType.AftermathDiscard,
+                                                    VariableGameNum.Num(currentSize - maxHandSize)
+                                                ),
+                                                activeContinuous)
+                                        ).get(0)
+                                    );
                                 }
                             }
-                            resolveGameChange(List.of(discards), activeContinuous);
 
                             resolveTriggerChains();
                         }
 
-                        // Only called when there's a card that needs to be discarded.
                         // Same effect as "Discard", but cards that check for "Discard" don't check for AftermathDiscard
                         case AftermathDiscard -> {
 
@@ -519,6 +526,7 @@ public class Engine { // Engine, along with VariableGameNum, should be the only 
                                         ));
                                     }
 
+                                    // The target is sent to the discard pile. Before, assumedly, it was checked that the target is in the hand.
                                     case Discard -> {
 
                                     }
@@ -591,6 +599,13 @@ public class Engine { // Engine, along with VariableGameNum, should be the only 
             }
         }
         state.addJustHappened(eventList);
+    }
+
+    public int getMaxHandSize(CommanderInstance check, List<EffectChangeInstance> activeContinuous) {
+        return 6 + getContinuousThatApplyOnObject(check, activeContinuous).stream()
+            .filter(c -> c.getTypeInstance() == EffectChangeType.IncreaseHandSize)
+            .mapToInt(c -> c.getStrength().getValue(state, sideIDtoController(check.getSide()), c, activeContinuous))
+            .sum();
     }
 
     /**
@@ -783,122 +798,163 @@ public class Engine { // Engine, along with VariableGameNum, should be the only 
         final EffectChangeType currentType = change.getType();
 
         switch (change.getType()) {
+            // Effects which can only be done on one of the available targets.
+            case Damage, HalveHealthRoundedUp, HalveHealthRoundedDown, Restore -> {
+                for (LivingObject l : availableTargets) {
+                    choiceList.add(List.of(
+                        new GameChoiceChange(
+                            change,
+                            l,
+                            List.of(
+                                strength
+                            )
+                        )
+                    ));
+                }
+            }
+
+            case MoveForwards -> choiceList.add(getMovementChoice(availableTargets, change, activeContinuous, strength,
+                List.of(Direction.FORWARD)));
+
+            case MoveBackwards -> choiceList.add(getMovementChoice(availableTargets, change, activeContinuous, strength,
+                List.of(Direction.BACKWARD)));
+
+            case MoveLeftOrRight -> choiceList.add(getMovementChoice(availableTargets, change, activeContinuous, strength,
+                List.of(Direction.LEFT, Direction.RIGHT)));
+
+            case MoveForwardsOrBackwards -> choiceList.add(getMovementChoice(availableTargets, change, activeContinuous, strength,
+                List.of(Direction.FORWARD, Direction.BACKWARD)));
+
+            case MoveAnyDirection -> choiceList.add(getMovementChoice(availableTargets, change, activeContinuous, strength,
+                List.of(Direction.LEFT, Direction.RIGHT, Direction.FORWARD, Direction.BACKWARD)));
+
+            // Effects which are done on every available target. In resolution, these just call their associated change on every target.
+            case DamageAll, RestoreAll -> {
+                choiceList.add(List.of(
+                    new GameChoiceChange(
+                        change,
+                        availableTargets,
+                        List.of(
+                            strength
+                        )
+                    )
+                ));
+            }
+
+            case ShroudAll -> {
+                choiceList.add(List.of(
+                    new GameChoiceChange(
+                        change,
+                        availableTargets.stream().filter(l -> !l.isShrouded()).toList(),
+                        List.of(
+                            strength
+                        )
+                    )
+                ));
+            }
+
+            // Effects which are done on a number of available targets, as determined by strength.
+
+            // Multiple things in one choice, but not on the same target.
+            // Strength determines how long the single added list is - information for these choices is an empty list.
+            case UniqueTarget, Search, Reveal, Unshroud, Shuffle, SendToDiscard, SendToDestroyed, SendToDecisiveDeck -> {
+                choiceList.add(getPlayerChoiceOfUniqueChoices(controller, change, strength, availableTargets));
+            }
+
+            case RandomTarget -> {
+                choiceList.add(
+                    getPlayerChoiceOfUniqueChoices(toRandom(controller), change, strength, availableTargets)
+                );
+            }
+
+            // Multiple things in one choice, including multiple times on the same target.
+            case MultiTarget -> {
+                choiceList.add(getPlayerChoiceOfChoices(controller, change, strength, availableTargets));
+            }
+
+            case RandomMultiTarget -> {
+                choiceList.add(
+                    getPlayerChoiceOfChoices(toRandom(controller), change, strength, availableTargets)
+                );
+            }
+
+            // May only discard cards that are in hand.
+            case Discard, AftermathDiscard -> {
+                choiceList.add(getPlayerChoiceOfUniqueChoices(controller, change, strength, availableTargets,
+                    l -> BoardLocation.inHand(l.getPosition().getBoardLocation())));
+            }
+
             case Place -> {
-                choiceList.add(getPlacementChoice(availableTargets, change, activeContinuous, true,
-                    z -> true)
+                choiceList.add(getPlacementChoice(controller, availableTargets, change, strength, true, activeContinuous,
+                    z -> true,
+                    c -> true)
+                );
+            }
+
+            case PlaceAdjacentToThisCard -> {
+                choiceList.add(getPlacementChoice(controller, availableTargets, change, strength, true, activeContinuous,
+                    z -> z.getPosition().isAdjacent(user.getPosition()), // Filters for adjacent zones
+                    c -> true)
                 );
             }
 
             case PlaceOnTarget -> {
-                choiceList.add(getPlacementChoice(availableTargets, change, activeContinuous, true,
-                    z -> user.getTarget().stream().anyMatch(t -> t.isOnFieldTarget(z))) // Filters for targeted zones
+                choiceList.add(getPlacementChoice(controller, availableTargets, change, strength, true, activeContinuous,
+                    z -> user.getTarget().stream().anyMatch(t -> t.isOnFieldTarget(z)), // Filters for targeted zones
+                    c -> true)
                 );
             }
 
             case PlaceWithNoCost -> {
-                choiceList.add(getPlacementChoice(availableTargets, change, activeContinuous, false,
-                    z -> true)
+                choiceList.add(getPlacementChoice(controller, availableTargets, change, strength, false, activeContinuous,
+                    z -> true,
+                    c -> true)
                 );
             }
 
             case PlaceWithNoCostOnTarget -> {
-                choiceList.add(getPlacementChoice(availableTargets, change, activeContinuous, false,
-                    z -> user.getTarget().stream().anyMatch(t -> t.isOnFieldTarget(z)))  // Filters for targeted zones
+                choiceList.add(getPlacementChoice(controller, availableTargets, change, strength, false, activeContinuous,
+                    z -> user.getTarget().stream().anyMatch(t -> t.isOnFieldTarget(z)),  // Filters for targeted zones
+                    c -> true)
                 );
             }
 
-            // Strength is ignored for place effects, unless it's 0.
             case PlaceUsingYourCardsOnField, PlaceUsingHand, PlaceUsingDestroyed, PlaceUsingDiscard, PlaceUsingDisplaced,
                  PlaceUsingDeck, PlaceUsingDecisivePile, PlaceUsingTarget, PlaceUsingCardsOnField, PlaceUsingOpponentsCardsOnField,
                  PlaceUsingZonesYouControl -> {
-                if (strength == 0) return List.of(List.of());
-
-                final List<LivingObject> usedThings = getUsableList(currentType, user);
-
-                // Set "Being Used By" for each usedCard, first.
-                // This is unset by resolveAfterEffect.
-                for (LivingObject beingUsed : usedThings) {
-                    final List<Integer> alreadyBeingUsedBy = new ArrayList<>(beingUsed.getUsedByEffectID());
-                    alreadyBeingUsedBy.add(change.getEffectID());
-                    beingUsed.setUsedByEffectID(alreadyBeingUsedBy);
-                }
-
-                final List<GameChoiceChange> choices = new ArrayList<>();
-                // For every card that can be placed
-                for (LivingObject card : availableTargets.stream()
-                        .filter(card -> card instanceof CardInstance && checkEffectConditions(card.getInstancedPlaceCost(), activeContinuous, change.getEffectID()))
-                        .toList()) {
-                    final VariableGameNum baseMaterial = getMaterialPaymentNum(card, activeContinuous);
-                    // For every zone it can be placed
-                    for (ZoneInstance zone : getPlaceableZones(card, activeContinuous)) {
-                        // For every combination of used cards that matches the card's material cost
-                        for (List<LivingObject> usableThings : getUsedMaterialCombinations(change, usedThings, card, zone.getPosition(), activeContinuous)) {
-                            final VariableGameNum materialPerUsed = getMaterialPaymentNum(card, activeContinuous);
-                            final int materialMult = materialPerUsed == null ?
-                                1
-                                : materialPerUsed.getValue(state, sideIDtoController(card.getUser()), change, activeContinuous);
-                            final int materialIncrease = usableThings.size() * materialMult;
-                            // If the number of used cards doesn't cost too much material to let the card be placed
-                            if (materialIncrease <= state.getCommander(card.getUser()).getMaterial()) {
-                                // create a choice for the cards that are used
-                                choices.add(new GameChoiceChange(
-                                    change,
-                                    usableThings, // targets cards to be used
-                                    List.of(
-                                        zone.getInstanceID(), // instanceID of zone to place on
-                                        card.getInstanceID(), // Placed card's instanceID
-                                        baseMaterial == null ? 0 : baseMaterial // Base material cost of the card, 0 if the card doesn't have a base material cost.
-                                            .getValue(state, controller, change, activeContinuous),
-                                        usableThings.size(), // Number of cards used
-                                        materialIncrease // Total material cost increase based on cards used
-                                    )
-                                ));
-                            }
-                        }
-                    }
-                }
-                choiceList.add(choices); // Cards that are used to place the card. May be empty if no cards are used to place the card.
+                choiceList.add(getUsedPlacementChoice(controller, availableTargets, change, strength, activeContinuous,
+                    z -> true,
+                    c -> true,
+                    u -> true));
             }
 
-            // Make the chooser choose for each token.
+            case PlaceUsingHandOrWithEffect -> {
+                choiceList.add(getUsedOrWithMaterialPlacementChoice(controller, availableTargets, change, strength, activeContinuous,
+                    z -> true,
+                    c -> true,
+                    u -> true));
+            }
+
             case PlaceConspiracyToken, PlaceTreeToken, PlaceAirToken, PlaceScrapToken, PlaceSporeToken, PlaceShrubToken, PlaceSpiritToken,
                  PlacePilotFishToken, PlaceHillToken, PlaceEchoToken, PlaceRatToken, PlaceDemonToken, PlaceImitationToken,
                  PlaceLabSubject00Token, PlaceSoulToken, PlaceOpenMindToken, PlacePureEnergyToken, PlaceTravestyToken,
                  PlaceTargetNameToken -> {
-                // For each Token to be placed (strength)
-                for (int i = 0; i < strength; i++) {
-                    // Make the token to be placed
-                    final CardInstance token = new CardInstance(state.getCommander(user.getUser()), CardDefinition.getTokenID(currentType), state.getLivingID(), state.getEffectID());
-                    // Make a gameChoice for each unique available position to add the token (The targetType of a token placing effect denotes where it can be placed)
-                    List<GameChoiceChange> choices = new ArrayList<>();
-                    for (Position position : availableTargets.stream().map(LivingObject::getPosition).distinct().toList()) {
-                        final boolean isField = position.getBoardLocation() == BoardLocation.FIELD;
-                        if (isField) {
-                            if (state.getField().getZoneAt(position).isOccupied()) continue;
-                        }
-                        choices.add(new GameChoiceChange(
-                            change,
-                            token, // Targets the token to be placed
-                            List.of(
-                                position.getBoardLocation().ordinal(), // Ordinal of board location
-                                isField ? state.getField().getZoneAt(position).getInstanceID() : 0 // ID of zone, 0 if it doesn't exist
-                            )
-                        ));
-                    }
-                    choiceList.add(choices);
-                }
+                final List<ZoneInstance> zoneTargets = ensureMatches(ZoneInstance.class, availableTargets);
+                choiceList.add(getTokenPlacementChoice(controller, change, strength, activeContinuous,
+                    zoneTargets::contains, // The zones to place on must be in the target of the placement effect.
+                    c -> true,
+                    u -> true));
             }
 
-            // Asks the client for its choice each time, then provides a singular choice of all the choices that were made.
             case RemoveEnergyCounters, RemoveBountyCounters, RemoveScrapCounters, RemoveTideCounters,
                  RemoveRageCounters, RemoveSturdyCounters, RemoveSiGNLCounters, RemoveTravelCounters, RemoveFervorCounters,
                  RemoveStorageCounters, RemoveUndeadCounters, RemoveVirtueCounters, RemoveSinCounters, RemoveDreamCounters,
                  RemoveInjectionCounters, RemoveVeilCounters, RemoveOverchargeCounters, RemoveFortificationCounters,
                  RemoveFrozenCounters, RemoveFlameCounters, RemoveInfectionCounters, RemoveEtherealCounters,
-                 RemoveMomentumCounters -> {
+                 RemoveMomentumCounters, RemoveRestoreEcho, RemoveDamageEcho -> {
                 final CounterType counterToRemove = CounterType.convertCounter(currentType);
                 List<GameChoiceChange> choices = new ArrayList<>();
-                getPlayerChoiceOfChoices(controller, choices, strength, change, availableTargets,
+                setSinglePlayerChoice(controller, choices, strength, change, availableTargets,
                     o -> o.hasCounter(counterToRemove)
                         && o.getCounters().stream().filter(type -> type == counterToRemove).count() // o's counters
                         - choices.stream().filter(choice -> choice.getTarget().get(0) == o).count() // minus the number of times o was chosen to be removed from
@@ -910,8 +966,7 @@ public class Engine { // Engine, along with VariableGameNum, should be the only 
                 AddSiGNLCounters, AddTravelCounters, AddFervorCounters, AddStorageCounters, AddUndeadCounters,
                 AddVirtueCounters, AddSinCounters, AddDreamCounters, AddInjectionCounters, AddVeilCounters,
                 AddOverchargeCounters, AddFortificationCounters, AddFrozenCounters, AddFlameCounters, AddInfectionCounters,
-                AddEtherealCounters, AddMomentumCounters,
-                AddDamageEcho, AddRestoreEcho -> {
+                AddEtherealCounters, AddMomentumCounters, AddDamageEcho, AddRestoreEcho -> {
                 List<GameChoiceChange> choices = new ArrayList<>();
                 for (LivingObject choice : getLivingChoices(change, activeContinuous)) {
                     choices.add(new GameChoiceChange(
@@ -941,7 +996,8 @@ public class Engine { // Engine, along with VariableGameNum, should be the only 
             case RandomChoose, DeclareRandomDirection -> {
                 choiceList.add(List.of(
                     new GameChoiceChange(
-                        change, availableTargets,
+                        change,
+                        availableTargets, // Should only target the object that is choosing
                         List.of(
                             change.getStrength() // Selected random choice
                                 .getValue(state, toRandom(controller), change, activeContinuous)
@@ -950,32 +1006,9 @@ public class Engine { // Engine, along with VariableGameNum, should be the only 
                 );
             }
 
-            // Effects that can do their effect on multiple things in one choice, including multiple times on the same target.
-            case MultiTarget -> {
-                choiceList.add(getPlayerChoiceOfChoices(controller, change, strength, availableTargets));
-            }
-
-            // Effects that can do their effect on multiple things in one choice, but not on the same target.
-            // Strength determines how long the single added list is - information for these choices is an empty list.
-            case UniqueTarget, Search, Reveal, Unshroud, Shuffle -> {
-                choiceList.add(getPlayerChoiceOfUniqueChoices(controller, change, strength, availableTargets));
-            }
-
-            case RandomTarget -> {
-                choiceList.add(
-                    getPlayerChoiceOfUniqueChoices(toRandom(controller), change, strength, availableTargets)
-                );
-            }
-
-            case RandomMultiTarget -> {
-                choiceList.add(
-                    getPlayerChoiceOfChoices(toRandom(controller), change, strength, availableTargets)
-                );
-            }
-
-            // Effects which have no option for user input once used (only targets commander). Targets the available commander targets.
+            // Effects which have no option for user input once used (only targets commander).
             case Excavate, Draw, GainMaterial, LoseMaterial -> {
-                for (CommanderInstance commander : getCommanderChoices(change, activeContinuous))
+                for (CommanderInstance commander : ensureMatches(CommanderInstance.class, availableTargets)) // Done on every commander target.
                     choiceList.add(
                     List.of(new GameChoiceChange(
                         change,
@@ -999,29 +1032,10 @@ public class Engine { // Engine, along with VariableGameNum, should be the only 
                 )));
             }
 
-            case MoveForwards -> choiceList.add(getMovementChoice(availableTargets, change, activeContinuous, strength,
-                Direction.FORWARD));
-            case MoveBackwards -> choiceList.add(getMovementChoice(availableTargets, change, activeContinuous, strength,
-                Direction.BACKWARD));
-            case MoveLeftOrRight -> choiceList.add(getMovementChoice(availableTargets, change, activeContinuous, strength,
-                List.of(Direction.LEFT, Direction.RIGHT)));
-            case MoveForwardsOrBackwards -> choiceList.add(getMovementChoice(availableTargets, change, activeContinuous, strength,
-                List.of(Direction.FORWARD, Direction.BACKWARD)));
-            case MoveAnyDirection -> choiceList.add(getMovementChoice(availableTargets, change, activeContinuous, strength,
-                List.of(Direction.LEFT, Direction.RIGHT, Direction.FORWARD, Direction.BACKWARD)));
-
-            default -> throw new IllegalArgumentException("Choice resolution for " + currentType + " doesn't exist.");
+            default -> throw new IllegalArgumentException("Choice resolution for " + currentType + " doesn't exist. " +
+                "It is either only used by other effects during resolution, or can only be called by the System.");
         }
         return choiceList;
-    }
-
-    /** Abbreviation for getMovementChoice that takes a single direction instead of a list. */
-    private List<GameChoiceChange> getMovementChoice(List<LivingObject> availableTargets,
-                                                     EffectChangeInstance change,
-                                                     List<EffectChangeInstance> activeContinuous,
-                                                     int strength,
-                                                     Direction direction) {
-        return getMovementChoice(availableTargets, change, activeContinuous, strength, List.of(direction));
     }
 
     private List<GameChoiceChange> getMovementChoice(List<LivingObject> availableTargets,
@@ -1053,52 +1067,193 @@ public class Engine { // Engine, along with VariableGameNum, should be the only 
         return false;
     }
 
-    private List<GameChoiceChange> getPlacementChoice(List<LivingObject> availableTargets, EffectChangeInstance change, List<EffectChangeInstance> activeContinuous, boolean payingCost, Predicate<ZoneInstance> zoneFilter) {
+    /** Returns the placement choice(s) a commander chooses that places Tokens, following other params. */
+    private List<GameChoiceChange> getTokenPlacementChoice(ControllerInstance controller,
+                                                           EffectChangeInstance change,
+                                                           int strength,
+                                                           List<EffectChangeInstance> activeContinuous,
+                                                           Predicate<ZoneInstance> zoneFilter,
+                                                           Predicate<CardInstance> cardFilter,
+                                                           Predicate<LivingObject> usedFilter) {
+        final List<CardInstance> tokens = new ArrayList<>();
+        for (int i = 0; i < strength; i++) {
+            tokens.add(CardInstance.TOKEN(state.getCommander(change.getUser().getUser()), CardDefinition.getTokenID(change.getType()), state.getLivingID(), state.getEffectID()));
+        }
+        final List<GameChoiceChange> choices = new ArrayList<>();
+        setSinglePlacementChoice(choices, controller, tokens, List.of(), change, strength, true, null, activeContinuous, zoneFilter, cardFilter, usedFilter);
+        return choices;
+    }
+
+    /** Returns the placement choice(s) a commander chooses that can place cards without using OR uses cards from the given availableTargets, following other params. */
+    private List<GameChoiceChange> getUsedOrWithMaterialPlacementChoice(ControllerInstance controller,
+                                                                        List<LivingObject> availableTargets,
+                                                                        EffectChangeInstance change,
+                                                                        int strength,
+                                                                        List<EffectChangeInstance> activeContinuous,
+                                                                        Predicate<ZoneInstance> zoneFilter,
+                                                                        Predicate<CardInstance> cardFilter,
+                                                                        Predicate<LivingObject> usedFilter) {
+        final List<LivingObject> usedThings = getUsableList(change.getType(), change.getUser(), activeContinuous);
+
+        // Sets "Being Used By" for each usedCard first
+        // This is unset by resolveAfterEffect.
+        for (LivingObject beingUsed : usedThings) {
+            final List<Integer> alreadyBeingUsedBy = new ArrayList<>(beingUsed.getUsedByEffectID()); // List of card's current "Used By"
+            alreadyBeingUsedBy.add(change.getEffectID()); // Adds this effect's "Used By"
+            beingUsed.setUsedByEffectID(alreadyBeingUsedBy);
+        }
+
+        final List<GameChoiceChange> choices = new ArrayList<>();
+        setSinglePlacementChoice(choices, controller, ensureMatches(CardInstance.class, availableTargets), usedThings, change, strength, true, null, activeContinuous, zoneFilter, cardFilter, usedFilter);
+        return choices;
+    }
+
+    /** Returns the placement choice(s) a commander chooses that uses cards from the given availableTargets, following other params. */
+    private List<GameChoiceChange> getUsedPlacementChoice(ControllerInstance controller,
+                                                          List<LivingObject> availableTargets,
+                                                          EffectChangeInstance change,
+                                                          int strength,
+                                                          List<EffectChangeInstance> activeContinuous,
+                                                          Predicate<ZoneInstance> zoneFilter,
+                                                          Predicate<CardInstance> cardFilter,
+                                                          Predicate<LivingObject> usedFilter) {
+        final List<LivingObject> usedThings = getUsableList(change.getType(), change.getUser(), activeContinuous);
+
+        // Sets "Being Used By" for each usedCard first
+        // This is unset by resolveAfterEffect.
+        for (LivingObject beingUsed : usedThings) {
+            final List<Integer> alreadyBeingUsedBy = new ArrayList<>(beingUsed.getUsedByEffectID()); // List of card's current "Used By"
+            alreadyBeingUsedBy.add(change.getEffectID()); // Adds this effect's "Used By"
+            beingUsed.setUsedByEffectID(alreadyBeingUsedBy);
+        }
+
+        final List<GameChoiceChange> choices = new ArrayList<>();
+        setSinglePlacementChoice(choices, controller, ensureMatches(CardInstance.class, availableTargets), usedThings, change, strength, true, true, activeContinuous, zoneFilter, cardFilter, usedFilter);
+        return choices;
+    }
+
+    /** Returns the placement choice(s) a commander chooses from the given availableTargets, following other params. */
+    private List<GameChoiceChange> getPlacementChoice(ControllerInstance controller,
+                                                      List<LivingObject> availableTargets,
+                                                      EffectChangeInstance change,
+                                                      int strength,
+                                                      boolean payingCost,
+                                                      List<EffectChangeInstance> activeContinuous,
+                                                      Predicate<ZoneInstance> zoneFilter,
+                                                      Predicate<CardInstance> cardFilter) {
         List<GameChoiceChange> choices = new ArrayList<>();
-        List<ZoneInstance> zonesToPlace = getZoneChoices(change, activeContinuous); // Ensures that zones are being targeted.
-        // For cards that may be placed
-        for (LivingObject choice : availableTargets) {
-            final VariableGameNum baseMaterial = getMaterialPaymentNum(choice, activeContinuous);
-            if (!payingCost || checkEffectConditions(choice.getInstancedPlaceCost(), activeContinuous)) {
-                // In zones it can be placed
-                for (ZoneInstance zone : getPlaceableZones(choice, zonesToPlace, activeContinuous).stream().filter(zoneFilter).toList()) {
-                    choices.add(new GameChoiceChange(
-                        change,
-                        choice, // Targets card to be placed
-                        List.of(
-                            zone.getInstanceID(), // ID of the zone to place on
-                            baseMaterial == null ? 0 : baseMaterial // Base material cost of the card, 0 if the card doesn't have a base material cost.
-                                .getValue(state, sideIDtoController(choice.getController()), change, activeContinuous)
-                        )
-                    ));
+        setSinglePlacementChoice(choices, controller, ensureMatches(CardInstance.class, availableTargets), List.of(), change, strength, payingCost, false, activeContinuous, zoneFilter, cardFilter, u -> true);
+        return choices;
+    }
+
+    /**
+     * Standardizes placement choices. Adds to the given placements List the placement choices made.
+     * "Used By" must be set before using this function, if placing cards that use cards.
+     */
+    private void setSinglePlacementChoice(List<GameChoiceChange> placements,
+                                          ControllerInstance controller,
+                                          List<CardInstance> availableTargets,
+                                          List<LivingObject> usedThings,
+                                          EffectChangeInstance change,
+                                          int strength,
+                                          boolean payingCost,
+                                          Boolean usingPlacement,
+                                          List<EffectChangeInstance> activeContinuous,
+                                          Predicate<ZoneInstance> zoneFilter,
+                                          Predicate<CardInstance> cardFilter,
+                                          Predicate<LivingObject> usedFilter) {
+        final List<ZoneInstance> zonesToPlace = getZoneChoices(change, activeContinuous).stream().filter(zoneFilter).toList(); // Ensures that zones are being targeted
+        // For the number of things to be placed
+        for (int i = 0; i < strength; i++) {
+            final List<GameChoiceChange> onePlacement = new ArrayList<>();
+            // For every card that can be placed
+            for (CardInstance card : availableTargets.stream() // Matches cardFilter, cannot have been selected for placement before, and placement conditions met
+                .filter(c -> cardFilter.test(c) && placements.stream().noneMatch(g -> g.getTarget().contains(c))
+                && (!payingCost || checkEffectConditions(c.getInstancedPlaceCost(), activeContinuous, change.getEffectID()))).toList()) {
+
+                final VariableGameNum baseMaterial = getMaterialPaymentNum(card, activeContinuous);
+                // For every zone it can be placed
+                for (ZoneInstance zone : getPlaceableZones(card, zonesToPlace, activeContinuous)) {
+                    // If cards are used to place the card
+                    if (usingPlacement == null ? isPlacedUsingCards(card, activeContinuous) : usingPlacement) {
+                        // For every combination of used cards that match the filter and match the card's material cost
+                        for (List<LivingObject> usableThings : getUsedMaterialCombinations(change, usedThings.stream().filter(usedFilter).toList(), card, zone.getPosition(), activeContinuous)) {
+                            final VariableGameNum materialPerUsed = getMaterialPaymentNum(card, activeContinuous);
+                            final int materialMult = materialPerUsed == null ?
+                                0
+                                : materialPerUsed.getValue(state, sideIDtoController(card.getUser()), change, activeContinuous);
+                            final int materialIncrease = usableThings.size() * materialMult;
+                            // If the number of used cards doesn't cost too much material to let the card be placed
+                            if (canPayMaterial(materialIncrease, state.getCommander(change.getUser().getUser()), change, activeContinuous)) {
+                                // create a choice for the cards that are used
+                                usableThings.add(0, card);
+                                onePlacement.add(new GameChoiceChange(
+                                    change,
+                                    usableThings, // The first target is the card to be placed, after, it's the cards to be used.
+                                    List.of(
+                                        zone.getInstanceID(), // instanceID of zone to place on
+                                        baseMaterial == null ? 0 : baseMaterial // Base material cost of the card, 0 if the card doesn't have a base material cost.
+                                            .getValue(state, controller, change, activeContinuous),
+                                        usableThings.size(), // Number of cards used
+                                        materialIncrease // Total material cost increase based on cards used
+                                    )
+                                ));
+                            }
+                        }
+                    }
+                    else { // if no cards are used to place the card
+                        // Create a choice for the card to be placed. (Same format as above)
+                        onePlacement.add(new GameChoiceChange(
+                            change,
+                            card, // Card to be placed.
+                            List.of(
+                                zone.getInstanceID(), // instanceID of zone to place on
+                                baseMaterial == null ? 0 : baseMaterial // Base material cost of the card, 0 if the card doesn't have a base material cost.
+                                    .getValue(state, controller, change, activeContinuous),
+                                0, // Number of cards used
+                                0 // Total material cost increase based on cards used
+                            )
+                        ));
+                    }
                 }
             }
+            placements.add(getPlayerChangeChoice(controller, List.of(onePlacement)).get(0));
         }
-        return choices;
     }
 
-    /** Abbreviation for getPlayerChoiceOfChoices that doesn't allow multiple of the same target to be selected. */
+    /** For effects whose strength determines the number of targets that can be selected, and not how effective the choice is. */
     private List<GameChoiceChange> getPlayerChoiceOfUniqueChoices(ControllerInstance controller, EffectChangeInstance change, int strength, List<LivingObject> targets) {
-        List<GameChoiceChange> choices = new ArrayList<>();
-        getPlayerChoiceOfChoices(controller, choices, strength, change, targets, o -> choices.stream().noneMatch(c -> c.getTarget().contains(o)));
-        return choices;
+        List<GameChoiceChange> choice = new ArrayList<>();
+        setSinglePlayerChoice(controller, choice, strength, change, targets, o -> choice.stream().noneMatch(c -> c.getTarget().contains(o)));
+        return choice;
     }
 
-    /** Abbreviation for getPlayerChoiceOfChoices that allows multiple of the same target to be selected. */
+    /** Abbreviation for getPlayerChoiceOfChoices that doesn't allow multiple of the same target to be selected, in addition to the given Predicate. */
+    private List<GameChoiceChange> getPlayerChoiceOfUniqueChoices(ControllerInstance controller, EffectChangeInstance change, int strength, List<LivingObject> targets, Predicate<LivingObject> filter) {
+        List<GameChoiceChange> choice = new ArrayList<>();
+        setSinglePlayerChoice(controller, choice, strength, change, targets, o -> filter.test(o) && choice.stream().noneMatch(c -> c.getTarget().contains(o)));
+        return choice;
+    }
+
+    /** For effects whose strength determines the number of targets that can be selected, and not how effective the choice is. */
     private List<GameChoiceChange> getPlayerChoiceOfChoices(ControllerInstance controller, EffectChangeInstance change, int strength, List<LivingObject> targets) {
-        List<GameChoiceChange> choices = new ArrayList<>();
-        getPlayerChoiceOfChoices(controller, choices, strength, change, targets, o -> true);
-        return choices;
+        List<GameChoiceChange> choice = new ArrayList<>();
+        setSinglePlayerChoice(controller, choice, strength, change, targets, o -> true);
+        return choice;
     }
 
-    /** For individual changes that require multiple choices, this function adds to oneChange the sequential choices the controller, which follow the provided filter. */
-    private void getPlayerChoiceOfChoices(ControllerInstance controller, List<GameChoiceChange> oneChange, int strength, EffectChangeInstance change, List<LivingObject> targets, Predicate<LivingObject> filter) {
+    private boolean canPayMaterial(int materialToPay, CommanderInstance commander, EffectObject check, List<EffectChangeInstance> activeContinuous) {
+        // Effect and activeContinuous checks to be added when continuous may affect this.
+        return (commander.getMaterial() >= materialToPay);
+    }
+
+    /** For individual changes that can do multiple things in one choice, this function adds to oneChange the sequential choices the controller, which follow the provided filter. */
+    private void setSinglePlayerChoice(ControllerInstance controller, List<GameChoiceChange> oneChange, int strength, EffectChangeInstance change, List<LivingObject> targets, Predicate<LivingObject> filter) {
         for (int i = 0; i < strength; i++) {
             List<GameChoiceChange> oneRemoval = new ArrayList<>();
             targets.stream().filter(filter).toList().forEach(object ->
                 oneRemoval.add(new GameChoiceChange(change, object, List.of())));
-            GameChoiceChange choice = getPlayerChangeChoice(controller, List.of(oneRemoval)).get(0);
-            oneChange.add(choice);
+            oneChange.add(getPlayerChangeChoice(controller, List.of(oneRemoval)).get(0)); // Add the choice to the given list.
         }
     }
 
@@ -1562,20 +1717,20 @@ public class Engine { // Engine, along with VariableGameNum, should be the only 
         if (change instanceof EffectChangeInstance) {
             return change.getEffectFrom().getInstanceCost().contains(change);
         }
-        if (change instanceof ConditionInstance) {
+        else if (change instanceof ConditionInstance) {
             return change.getEffectFrom().getInstanceCost().stream()
                 .map(EffectChangeInstance::getInstanceConditions)
                 .flatMap(List::stream)
                 .toList()
                 .contains(change);
         }
-        if (change instanceof EffectDurationInstance) {
+        else if (change instanceof EffectDurationInstance) {
             return change.getEffectFrom().getInstanceCost().stream()
                 .map(EffectChangeInstance::getDurationInstance)
                 .toList()
                 .contains(change);
         }
-        throw new IllegalArgumentException("How did we get here?");
+        else throw new IllegalArgumentException("How did we get here?");
     }
 
     /** Returns true if the effectChangeType(s) associated with typeSimultNum are in the state's justHappened. */
@@ -1649,7 +1804,7 @@ public class Engine { // Engine, along with VariableGameNum, should be the only 
                                                                 List<EffectChangeInstance> activeConstantContinuous) {
         final List<TargetType> targetType = usingEffect.getTargetInstance();
         if (targetType == null || targetType.isEmpty()) return null;
-        if (targetType.contains(TargetType.Gamestate)) return new ArrayList<>(0);
+        if (targetType.contains(TargetType.Gamestate)) return List.of();
 
         final LivingObject user = usingEffect.getUser();
         List<T> availableChoices = new ArrayList<T>(list);
@@ -1963,7 +2118,7 @@ public class Engine { // Engine, along with VariableGameNum, should be the only 
                      PlacementCostCanBeMetByUsersDecisivePileCards, PlacementCostCanBeMetByTargets,
                      PlacementCostCanBeMetByAnyFieldCards, PlacementCostCanBeMetByOpponentsFieldCards -> {
 
-                    final List<CardInstance> cardsToBeUsed = getUsableList(currentType, user);
+                    final List<CardInstance> cardsToBeUsed = getUsableList(currentType, user, activeConstantContinuous);
 
                     availableChoices.removeIf(candidate -> {
                         switch (candidate.getInstancedPlaceCost().getConditions().get(0).getType()) {
@@ -2094,15 +2249,15 @@ public class Engine { // Engine, along with VariableGameNum, should be the only 
         return isContinuousTypeOnObject(check, EffectChangeType.CannotBeUsed, activeContinuous);
     }
 
-    private List<LivingObject> getUsableList(EffectChangeType used, LivingObject user) {
+    private List<LivingObject> getUsableList(EffectChangeType used, LivingObject user, List<EffectChangeInstance> activeContinuous) {
         //noinspection unchecked
-        return (List<LivingObject>) switch(used) { // Unchecked Cast. It must be able to return zones / commanders as well.
+        return (List<LivingObject>) ensureMatches(LivingObject.class, switch(used) { // Unchecked cast.
             case PlaceUsingZonesYouControl -> state.getField().getZones().stream()
                 .filter(z -> z.getController() == user.getUser())
                 .toList();
             case PlaceUsingYourCardsOnField -> state.getField().getCards().stream()
                 .filter(c -> c.getController() == user.getUser()).toList();
-            case PlaceUsingHand -> state.getCommander(user.getUser()).getHand();
+            case PlaceUsingHand, PlaceUsingHandOrWithEffect -> state.getCommander(user.getUser()).getHand();
             case PlaceUsingDestroyed -> state.getCommander(user.getUser()).getDestroyedPile();
             case PlaceUsingDiscard ->  state.getCommander(user.getUser()).getDiscardPile();
             case PlaceUsingDisplaced ->  state.getCommander(user.getUser()).getDisplacedPile();
@@ -2118,10 +2273,10 @@ public class Engine { // Engine, along with VariableGameNum, should be the only 
             case PlaceUsingOpponentsCardsOnField -> state.getField().getCards().stream()
                 .filter(c -> c.getUser() == user.getUser().opponent()).toList();
             default -> throw new IllegalArgumentException("How did we get here?");
-        };
+        });
     }
 
-    private List<CardInstance> getUsableList(TargetType used, LivingObject user) {
+    private List<CardInstance> getUsableList(TargetType used, LivingObject user, List<EffectChangeInstance> activeContinuous) {
         return switch(used) {
             case PlacementCostCanBeMetByUsersFieldCards -> state.getField().getCards().stream()
                 .filter(c -> c.getUser() == user.getUser()).toList();
@@ -2313,6 +2468,16 @@ public class Engine { // Engine, along with VariableGameNum, should be the only 
      */
     private static <T extends LivingObject> List<T> ensureMatches(Class<T> type, LivingObject obj) {
         return type.isInstance(obj) ? List.of(type.cast(obj)) : List.of();
+    }
+
+    /** Returns every object in the list whose class matches with the given class. */
+    private static <T extends LivingObject> List<T> ensureMatches(Class<T> type, List<LivingObject> objs) {
+        List<T> matchingObjects = new ArrayList<>();
+        for (LivingObject l : objs) {
+            final List<T> element = ensureMatches(type, l);
+            if (element.size() == 1) matchingObjects.add(element.get(0));
+        }
+        return matchingObjects;
     }
 
     /** Swaps two elements in a list based on index number. */

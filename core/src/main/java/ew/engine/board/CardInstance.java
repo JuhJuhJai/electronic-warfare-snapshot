@@ -105,7 +105,7 @@ public final class CardInstance implements LivingObject {
     }
 
     /** Used for cards that are made during the duration of the game, usually tokens. Their modifier is always NORMAL. */
-    public CardInstance(CommanderInstance owner, int cardDefinitionID, AtomicInteger nextCardIDs, AtomicInteger nextEffectIDs) {
+    private CardInstance(CommanderInstance owner, int cardDefinitionID, AtomicInteger nextCardIDs, AtomicInteger nextEffectIDs) {
         CardDefinition reference = new CardDefinition(cardDefinitionID);
         this.cardID = reference.cardID;
         this.rarity = reference.rarity;
@@ -133,6 +133,10 @@ public final class CardInstance implements LivingObject {
         this.cardInstanceId = this.cardPriority = nextCardIDs.getAndIncrement();
         this.instancedPlaceCost = new EffectInstance(placeCost, this, nextEffectIDs);
         for (Effect effect : effects) instancedEffects.add(new EffectInstance(effect, this, nextEffectIDs));
+    }
+
+    public static CardInstance TOKEN(CommanderInstance owner, int cardDefinitionID, AtomicInteger nextCardIDs, AtomicInteger nextEffectIDs) {
+        return new CardInstance(owner, cardDefinitionID, nextCardIDs, nextEffectIDs);
     }
 
     public LivingObject getSelf() { return this; }

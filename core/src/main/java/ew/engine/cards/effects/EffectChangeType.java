@@ -24,14 +24,14 @@ public enum EffectChangeType {
     Shuffle, ShuffleMaterial,
     Discard, SendToDiscard, DiscardMaterial,
     Draw, DrawFromOpponentsDeck, ReturnToHand, ReturnMaterialToHand,
-    Place, PlaceOnTarget, PlaceWithNoCost, PlaceWithNoCostOnTarget,
+    Place, PlaceAdjacentToThisCard, PlaceOnTarget, PlaceWithNoCost, PlaceWithNoCostOnTarget,
         PlaceConspiracyToken, PlaceTreeToken, PlaceAirToken, PlaceScrapToken, PlaceSporeToken, PlaceShrubToken, PlaceSpiritToken,
         PlacePilotFishToken, PlaceHillToken, PlaceEchoToken, PlaceRatToken, PlaceDemonToken, PlaceImitationToken,
         PlaceLabSubject00Token, PlaceSoulToken, PlaceOpenMindToken, PlacePureEnergyToken, PlaceTravestyToken,
         PlaceTargetNameToken,
         PlaceUsingHand, PlaceUsingYourCardsOnField, PlaceUsingDestroyed, PlaceUsingDiscard, PlaceUsingDisplaced, PlaceUsingDeck,
         PlaceUsingDecisivePile, PlaceUsingCardsOnField, PlaceUsingOpponentsCardsOnField, PlaceUsingTarget, PlaceUsingZonesYouControl,
-        PlaceUsingOrWithEffect,
+        PlaceUsingHandOrWithEffect,
     Search,
     Excavate,
     // For displace, strength is the number of cards. Displace material's strength is the number of material.
@@ -61,15 +61,15 @@ public enum EffectChangeType {
         RemoveMomentumCounters,
         RemoveEcho, RemoveDamageEcho, RemoveRestoreEcho,
 
-    Restore, DoubleHealth,
-    Damage, HalveHealthRoundedUp, HalveHealthRoundedDown,
+    Restore, DoubleHealth, RestoreAll,
+    Damage, HalveHealthRoundedUp, HalveHealthRoundedDown, DamageAll,
     SendToDecisiveDeck, SendMaterialToDecisiveDeck,
     Destroy, SendToDestroyed, DestroyMaterial,
     GainControl,
     CopyName, AddNameDoomed,
     AddEffect,
     Unreveal,
-    Shroud,
+    Shroud, ShroudAll,
     AddDrawPhase, AddBuildPhase, AddCombatPhase, AddAftermathPhase,
     SkipPhase,
     RemoveDrawPhase, RemoveBuildPhase, RemoveCombatPhase, RemoveAftermathPhase,
@@ -115,36 +115,36 @@ public enum EffectChangeType {
      */
     public int getSimultNum() {
         final int n = this.ordinal();
-        if (n >= 166) return 0; // Effects not mentioned in simultaneous resolution order go first.
+        if (n >= 170) return 0; // Effects not mentioned in simultaneous resolution order go first.
         if (n <= 1) return 1; // Pay
         if (n <= 5) return 2; // Target
         if (n <= 13) return 3; // Declare / choose
-        if (n == 14) return 4; // Reveal
-        if (n == 15) return 5; // Unshroud
+        if (n <= 14) return 4; // Reveal
+        if (n <= 15) return 5; // Unshroud
         if (n <= 17) return 6; // Shuffle
         if (n <= 20) return 7; // Discard
-        if (n <= 25) return 8; // Draw / return to hand
-        if (n <= 58) return 9; // Place
-        if (n == 60) return 10; // Search
-        if (n == 61) return 11; // Excavate
-        if (n <= 63) return 12; // Displace
-        if (n == 64) return 13; // Undisplace
-        if (n <= 68) return 14; // Ride
-        if (n <= 72) return 15; // Swap
-        if (n == 73) return 16; // Warp
-        if (n <= 78) return 17; // Move
-        if (n <= 80) return 18; // Gain / lose material
-        if (n <= 107) return 19; // Add counters
-        if (n <= 134) return 20; // Remove counters
-        if (n <= 136) return 21; // Restore
-        if (n <= 139) return 22; // Damage
-        if (n <= 141) return 23; // Send to Decisive
-        if (n <= 144) return 24; // Destroy
-        if (n == 145) return 25; // Gain control
-        if (n <= 147) return 26; // Change name
-        if (n == 148) return 27; // Add Effect
-        if (n == 149) return 28; // Unreveal
-        if (n == 150) return 29; // Shroud
+        if (n <= 24) return 8; // Draw / return to hand
+        if (n <= 60) return 9; // Place
+        if (n <= 61) return 10; // Search
+        if (n <= 62) return 11; // Excavate
+        if (n <= 64) return 12; // Displace
+        if (n <= 65) return 13; // Undisplace
+        if (n <= 69) return 14; // Ride
+        if (n <= 73) return 15; // Swap
+        if (n <= 74) return 16; // Warp
+        if (n <= 79) return 17; // Move
+        if (n <= 81) return 18; // Gain / lose material
+        if (n <= 108) return 19; // Add counters
+        if (n <= 135) return 20; // Remove counters
+        if (n <= 138) return 21; // Restore
+        if (n <= 142) return 22; // Damage
+        if (n <= 144) return 23; // Send to Decisive
+        if (n <= 147) return 24; // Destroy
+        if (n <= 148) return 25; // Gain control
+        if (n <= 150) return 26; // Change name
+        if (n <= 151) return 27; // Add Effect
+        if (n <= 152) return 28; // Unreveal
+        if (n <= 154) return 29; // Shroud
         // etc
 
         return 0;

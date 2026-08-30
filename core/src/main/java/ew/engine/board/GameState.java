@@ -9,6 +9,7 @@ import ew.server.GameResult;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 /**
@@ -218,10 +219,14 @@ public final class GameState {
             .toList();
     }
 
+    public List<LivingObject> getLivingObjects(Predicate<LivingObject> filter) {
+        return getLivingObjects().stream().filter(filter).toList();
+    }
+
     public LivingObject getLivingObject(int instanceID) {
         if (instanceID == 0) return null;
         for (LivingObject check : getLivingObjects()) if (check.getInstanceID() == instanceID) return check;
-        throw new IllegalArgumentException("No LivingObject exist with an id of " + instanceID);
+        throw new IllegalArgumentException("No LivingObject exists with an id of " + instanceID);
     }
     /** Returns a List of LivingObject whose originalID is the same. Use for "Exclusive" which checks across all cards with the same type. */
     public List<LivingObject> getOriginalLiving(int originalID) {
