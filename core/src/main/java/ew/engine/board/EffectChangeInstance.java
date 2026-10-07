@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public final class EffectChangeInstance extends EffectChange implements EffectStipulationObject {
-
     EffectChangeType typeInstance;
     List<TargetType> targetRequirementsInstance;
     VariableGameNum strengthInstance;
@@ -51,6 +50,8 @@ public final class EffectChangeInstance extends EffectChange implements EffectSt
     public int getEffectID() { return effectInstanceID; }
     public int getTimesUsedThisTurn() { return timesUsed; }
     public boolean isNegated() { return isNegated; }
+    public EffectChangeInstance getEffectChangeFrom() { return this; }
+    public boolean isCost() { return this.getEffectFrom().getInstanceCost().contains(this); }
 
     public void setInstanceConditions(List<ConditionInstance> conditions) { this.instanceConditions = conditions; }
     public void setTypeInstance(EffectChangeType effectChangeType) { this.typeInstance = effectChangeType; }
@@ -78,21 +79,6 @@ public final class EffectChangeInstance extends EffectChange implements EffectSt
         for (Condition condition : effectChange.getChangeConditions()) {
             instanceConditions.add(new ConditionInstance(condition, owner, nextEffectIDs, changeFrom));
         }
-        this.durationInstance = new EffectDurationInstance(effectChange.getDuration(), owner, nextEffectIDs, changeFrom);
-    }
-
-    public EffectChangeInstance(EffectChangeInstance copyInstance) {
-        super(copyInstance.getChangeConditions(), copyInstance.getType(), copyInstance.getTargetRequirements(), copyInstance.getStrength(), copyInstance.getDuration());
-        this.owner = copyInstance.getOwner();
-        this.changeFrom = copyInstance.getEffectFrom();
-        this.instanceConditions = copyInstance.getInstanceConditions();
-        this.user = copyInstance.getUser();
-        this.effectInstanceID = copyInstance.getEffectID();
-        this.typeInstance = copyInstance.getTypeInstance();
-        this.targetRequirementsInstance = copyInstance.getTargetInstance();
-        this.strengthInstance = copyInstance.getStrengthInstance();
-        this.durationInstance = new EffectDurationInstance(copyInstance.getDurationInstance());
-        this.timesUsed = copyInstance.getTimesUsedThisTurn();
-        this.isNegated = copyInstance.isNegated();
+        this.durationInstance = new EffectDurationInstance(effectChange.getDuration(), owner, nextEffectIDs, this);
     }
 }

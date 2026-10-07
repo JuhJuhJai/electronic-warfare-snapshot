@@ -48,10 +48,10 @@ public final class ZoneInstance implements LivingObject {
     int Qvariable = 0;
     int declaredNum = 0;
     int declaredName = 0; // x = name of the cardID associated with x in CardDefinition
-    int declaredAttribute = 0; // 1 = Human, etc. Ordinal + 1;
-    int declaredPile = 0; // x = ordinal of board location (1 = COMMANDER_ONE, 2 = DECK_ONE, etc.)
-    int declaredDirection = 0; // 1 = forwards, then clockwise.
-    List<Integer> declaredChoice = new ArrayList<>(0); // for "Choose x: ..." effects.
+    CardAttribute declaredAttribute = null;
+    Pile declaredPile = null;
+    Direction declaredDirection = null;
+    List<Integer> declaredChoice = new ArrayList<>(1); // for "Choose x: ..." effects.
 
     public String toString() { return type.toString() + " at " + position; }
 
@@ -95,9 +95,9 @@ public final class ZoneInstance implements LivingObject {
     public int getQ()                   { return Qvariable; }
     public int getDeclaredNum()         { return declaredNum; }
     public int getDeclaredName()        { return declaredName; }
-    public int getDeclaredAttribute()   { return declaredAttribute; }
-    public int getDeclaredPile()        { return declaredPile; }
-    public int getDeclaredDirection()   { return declaredDirection; }
+    public CardAttribute getDeclaredAttribute()   { return declaredAttribute; }
+    public Pile getDeclaredPile()        { return declaredPile; }
+    public Direction getDeclaredDirection()   { return declaredDirection; }
     public List<Integer> getDeclaredChoices()      { return declaredChoice; }
     public List<CounterType> getCounters() { return new ArrayList<CounterType>(); }
     public boolean hasCounter(CounterType counter) { return false; }
@@ -124,7 +124,7 @@ public final class ZoneInstance implements LivingObject {
     public boolean isDestroyed()        { return false; }
     public boolean isExcavated()        { return false; }
     public boolean isSearched()         { return false; }
-    public boolean isToken()            { return false; }
+    public boolean isOriginallyToken()  { return false; }
     public boolean isDecisive()         { return false; }
     public boolean isTokenInstance()    { return false; }
     public boolean isDecisiveInstance() { return false; }
@@ -147,9 +147,9 @@ public final class ZoneInstance implements LivingObject {
     public void setQ(int q)                 { Qvariable = q; }
     public void setDeclaredNum(int d)       { declaredNum = d; }
     public void setDeclaredName(int d)      { declaredName = d; }
-    public void setDeclaredAttribute(int d) { declaredAttribute = d; }
-    public void setDeclaredPile(int d)      { declaredPile = d; }
-    public void setDeclaredDirection(int d) { declaredDirection = d; }
+    public void setDeclaredAttribute(CardAttribute d) { declaredAttribute = d; }
+    public void setDeclaredPile(Pile d)      { declaredPile = d; }
+    public void setDeclaredDirection(Direction d) { declaredDirection = d; }
     public void setDeclaredChoices(List<Integer> choice) { declaredChoice = choice; }
     public void addEffect(EffectInstance effect) { this.instancedEffects.add(effect); }
     public void removeEffect(int effectID) { for (int i = 0; i < instancedEffects.size(); i++) if (instancedEffects.get(i).getEffectID() == effectID) { instancedEffects.remove(i); return; }

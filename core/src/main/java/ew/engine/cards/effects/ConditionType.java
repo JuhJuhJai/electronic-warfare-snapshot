@@ -7,6 +7,7 @@ public enum ConditionType {
     MinMaterial,
     MinHealth,
     MinPrecision,
+    HigherThan0Strength, // Check the given check variableGameNum has a value that resolves higher than 0.
 
     AvailableAttackPlacementSpace,
     AvailableProductionPlacementSpace,
@@ -16,8 +17,8 @@ public enum ConditionType {
 
     MinCounters,
     MinFortificationCounters, MinFrozenCounters, MinFlameCounters,
-    MinInfectionCounters, MinEtherealCounters, MinEchoCounters,
-    MinMomentumCounters, MaxMomentumCounters,
+    MinInfectionCounters, MinEtherealCounters, MinMomentumCounters, MaxMomentumCounters,
+    MinEchoCounters, MinDamageEcho, MinRestoreEcho,
 
     MinEnergyCounters, MinBountyCounters, MinScrapCounters, MinTideCounters,
     MinRageCounters, MinSturdyCounters, MinSiGNLCounters, MinTravelCounters,
@@ -26,8 +27,9 @@ public enum ConditionType {
     MinOverchargeCounters,
 
     MaxEffectPerTurn,
-    IfLastChangeResolved, // Only use as a
+    MaxEffectPerPhase,
     Exclusive,
+    IfLastChangeResolved,
 
     AbleToRideCard,
 
@@ -55,6 +57,7 @@ public enum ConditionType {
     CardDestroyedOrDiscarded,
     CardDestroyedExceptByAttack,
     CardDestroyedExceptByAttackOrDiscarded,
+    CardDestroyedExceptByOpponent,
 
     CardPlaced,
     CardUnshrouded,

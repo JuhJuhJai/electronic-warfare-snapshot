@@ -5,20 +5,7 @@ import ew.engine.cards.effects.Condition;
 import java.util.ArrayList;
 import java.util.List;
 
-public interface EffectObject {
-    boolean equals(Object other);
-    boolean typeEquals(EffectObject other);
-    int hashCode();
-    String toString();
-
-    EffectInstance getEffectFrom();
-    LivingObject getOwner();
-    LivingObject getUser();
-    List<ConditionInstance> getInstanceConditions();
-    int getEffectID();
-    int getTimesUsedThisTurn();
-    boolean isNegated();
-
+public interface EffectObject extends ImmutableEffectObject {
     void setInstanceConditions(List<ConditionInstance> conditions);
     void tickTimesUsed();
     void setTimesUsedThisTurn(int timesUsedThisTurn);

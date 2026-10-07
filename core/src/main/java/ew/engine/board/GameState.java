@@ -20,120 +20,109 @@ import java.util.stream.Stream;
  */
 public final class GameState {
 
-    public final AtomicInteger livingID = new AtomicInteger(1); // gamestate is 0, commander 1 is 1, commander 2 is 2
-    public final AtomicInteger effectID = new AtomicInteger(1);
+    public final AtomicInteger nextLivingID = new AtomicInteger(1); // gamestate is 0, commander 1 is 1, commander 2 is 2
+    public final AtomicInteger nextEffectID = new AtomicInteger(1);
     public final AtomicInteger nextPriority = new AtomicInteger(1);
     public final MatchFormat format;
     public boolean gameGoing = false;
     List<GameResult> gameResult;
 
-    final Field field = new Field(livingID);
-    final CommanderInstance playerOne;
-    final CommanderInstance playerTwo;
+    public final Field field;
+    public final CommanderInstance playerOne;
+    public final CommanderInstance playerTwo;
 
-    int turn = 0;
-    Phase phase = Phase.SETUP;
-    TimingPoint currentTimingPoint = TimingPoint.D0;
-    final List<Phase> phaseOrder = new ArrayList<>(List.of(Phase.DRAW, Phase.BUILD, Phase.COMBAT, Phase.AFTERMATH));
-    List<Phase> phaseOrderInstance = new ArrayList<>(phaseOrder); // phases can be added, so this is instanced
+    public int turn = 0;
+    public Phase phase = Phase.SETUP;
+    public TimingPoint timingPoint = TimingPoint.D0;
+    public final List<Phase> originalPhaseOrder = List.of(Phase.DRAW, Phase.BUILD, Phase.COMBAT, Phase.AFTERMATH);
+    List<Phase> phaseOrderInstance = new ArrayList<>(originalPhaseOrder); // phases can be added, so this is instanced
+
+    // There's a world where these are split.
+    /** Base collection for commander 1 */
+    public int baseCollection1 = 10;
+    /** Base collection for commander 2. */
+    public int baseCollection2 = 10;
 
     /** Who currently holds the Opportunity to Play during Build (CR8). */
-    SideID opportunityHolder = SideID.NEUTRAL;
+    public SideID opportunityHolder = SideID.NEUTRAL;
     /** Who receives the FIRST Opportunity to Play this turn; alternates each turn (CR6.2.1). */
-    SideID firstOpportunity = SideID.ONE;
-    /**
-     * The current commander with a choice to do something in a Trigger Chain. Changes with each selection.
-     */
-    SideID triggerOpportunity = SideID.ONE; // Resets to the player who has the first opportunity
-
+    public SideID firstOpportunity = SideID.ONE;
+    /** The current commander with a choice to do something in a Trigger Chain. Changes with each selection. */
+    public SideID triggerOpportunity; // Resets to the player who has the first opportunity
+    public SideID firstTriggerOpportunity = SideID.ONE; // There's a world where this is different from firstOpportunity.
     /** Who passed first in the final consecutive passes; picks the first lane in Combat (CR10.1.1). */
-    SideID firstToPass = SideID.NEUTRAL;
-    SideID winner = SideID.NEUTRAL;
-    /**
-     * What's JUST HAPPENED in the gamestate, as a list of effect changes. Applies for Triggers.
-     * Simultaneous Effects are put into the same list.
-     */
-    List<List<GameEvent>> justHappened = new ArrayList<>();
+    public SideID firstToPass = SideID.NEUTRAL;
+    public SideID winner = SideID.NEUTRAL;
+    /** What's JUST HAPPENED in the gamestate, as a list of effect changes. Applies for Triggers.
+     * Simultaneous Effects are put into the same list. */
+    List<List<GameEvent>> justHappened;
     /** Stores effectChange that last for an amount of time */
     List<EffectChangeInstance> effectsWithDuration = new ArrayList<>();
     /** Stores effects that have been used for OncePerTurn and Exclusive effects. */
     List<EffectInstance> effectsUsedThisTurn = new ArrayList<>();
 
-    // for Combat substate (selected/resolved lanes, action lists). Null while it's not the combat phase.
-    int selectedLane;
+    // For Combat substate (selected/resolved lanes, action lists). Null while it's not the combat phase.
+    public Integer selectedLane;
     List<Integer> resolvedLanes;
     List<GameChoice> playerOneActionList;
     List<GameChoice> playerTwoActionList;
 
-    // Most effects can't be used between the cost and effect of another effect, except triggers that unshroud and Continuous effects.
-    boolean isBetweenEffects = false;
+    /** Most effects can't be used between the cost and effect of another effect, except triggers that unshroud and Continuous effects.*/
+    public boolean isBetweenEffects = false;
+    public boolean isInTriggerChain = false;
 
     /** Also initializes commander decks. */
     public GameState(MatchFormat format, Commander goingFirst, Deck goingFirstDeck, Commander goingSecond, Deck goingSecondDeck) {
         this.format = format;
-        this.playerOne = new CommanderInstance(goingFirst, livingID, effectID);
+        this.playerOne = new CommanderInstance(goingFirst, nextLivingID, nextEffectID);
         for (Map.Entry<CardStored, Integer> entry : goingFirstDeck.getCards().entrySet()) {
-            for (int i = entry.getValue(); i >= 0; i--) {
-                playerOne.getDeck().add(new CardInstance(playerOne, entry.getKey(), livingID, effectID));
+            for (int i = entry.getValue(); i > 0; i--) {
+                playerOne.getDeck().contents.add(new CardInstance(playerOne, entry.getKey(), nextLivingID, nextEffectID));
             }
         }
 
-        this.playerTwo = new CommanderInstance(goingSecond, livingID, effectID);
+        this.playerTwo = new CommanderInstance(goingSecond, nextLivingID, nextEffectID);
         for (Map.Entry<CardStored, Integer> entry : goingSecondDeck.getCards().entrySet()) {
-            for (int i = entry.getValue(); i >= 0; i--) {
-                playerTwo.getDeck().add(new CardInstance(playerTwo, entry.getKey(), livingID, effectID));
+            for (int i = entry.getValue(); i > 0; i--) {
+                playerTwo.getDeck().contents.add(new CardInstance(playerTwo, entry.getKey(), nextLivingID, nextEffectID));
             }
         }
+        field = new Field(nextLivingID);
     }
 
-    public MatchFormat getFormat() { return format; }
-    public Field getField() { return field; }
     public CommanderInstance getCommander(SideID id) { return id == SideID.ONE ? playerOne : playerTwo; }
-    public CommanderInstance getOpponentOf(SideID id) { return getCommander(id.opponent()); }
-    public int getTurn()                 { return turn; }
-    public Phase getPhase()              { return phase; }
-    public SideID getWinner()            { return winner; }
-    public SideID getOpportunityHolder() { return opportunityHolder; }
-    public SideID getFirstOpportunity()  { return firstOpportunity; }
-    public SideID getTriggerOpportunity() { return triggerOpportunity; }
-    public SideID getFirstToPass()       { return firstToPass; }
-    public int getSelectedLane()         { return selectedLane; }
     public List<Integer> getResolvedLanes() { return resolvedLanes; }
     public List<GameChoice> getPlayerOneActionList() { return playerOneActionList; }
     public List<GameChoice> getPlayerTwoActionList() { return playerTwoActionList; }
 
-    public List<Phase> getPhaseOrder() { return phaseOrder; }
     public List<Phase> getPhaseOrderInstance()   { return phaseOrderInstance; }
     public List<List<GameEvent>> getJustHappened() { return justHappened; }
     public List<EffectChangeInstance> getEffectsWithDuration() { return effectsWithDuration; }
     public List<EffectInstance> getEffectsUsedThisTurn() { return effectsUsedThisTurn; }
-    public boolean getIsBetweenEffects() { return isBetweenEffects; }
-    public AtomicInteger getLivingID() { return livingID; }
-    public AtomicInteger getEffectID() { return effectID; }
-    public TimingPoint getTimingPoint() { return currentTimingPoint; }
+
+    public AtomicInteger getNextLivingID() { return nextLivingID; }
+    public AtomicInteger getNextEffectID() { return nextEffectID; }
+    public AtomicInteger getPriority() { return nextPriority; }
     public List<GameResult> getGameResult() { return gameResult; }
 
-    public void setTurn(int v)                  { this.turn = v; }
-    public void setPhase(Phase v)               { this.phase = v; }
-    public void setTimingPoint(TimingPoint t)   { this.currentTimingPoint = t; }
     public void setWinner(SideID winner)        { this.winner = winner; }
-    public void setOpportunityHolder(SideID v)  { this.opportunityHolder = v; }
-    public void setFirstOpportunity(SideID v)   { this.firstOpportunity = v; }
-    public void setTriggerOpportunity(SideID v) { this.triggerOpportunity = v; }
-    public void setFirstToPass(SideID v)        { this.firstToPass = v; }
     public void setSelectedLane(int laneSelection) { this.selectedLane = laneSelection; }
     public void setResolvedLanes(List<Integer> lanes) { this.resolvedLanes = lanes; }
     public void addResolvedLane(int lane) { this.resolvedLanes.add(lane); }
     public void setPlayerOneActionList(List<GameChoice> actionList) { this.playerOneActionList = actionList; }
     public void setPlayerTwoActionList(List<GameChoice> actionList) { this.playerTwoActionList = actionList; }
+    /** Removes the first action from both player's action lists. */
+    public void removeOneAction() { this.playerOneActionList.remove(0); this.playerTwoActionList.remove(0); }
 
-    public void setPhaseOrder(ArrayList<Phase> phaseOrderInstance) { this.phaseOrderInstance = phaseOrderInstance; }
+    public void setOriginalPhaseOrder(ArrayList<Phase> phaseOrderInstance) { this.phaseOrderInstance = phaseOrderInstance; }
     public void addJustHappened(List<GameEvent> simultaneousEffects) { justHappened.add(simultaneousEffects); }
     public void addJustHappened(GameEvent effect) { justHappened.add(List.of(effect)); }
     public void clearJustHappened() { this.justHappened = new ArrayList<>(); }
     public void setEffectsWithDuration(List<EffectChangeInstance> newEffects) { this.effectsWithDuration = newEffects; }
+    public void addEffectWithDuration(EffectChangeInstance effectWithDuration) { this.effectsWithDuration.add(effectWithDuration); }
     public void setEffectsUsedThisTurn(List<EffectInstance> newEffects) { this.effectsUsedThisTurn = newEffects; }
-    public void setBetweenEffects(boolean isBetweenEffects) { this.isBetweenEffects = isBetweenEffects; }
+    /** Sets selectedLane, resolvedLanes, playerOneActionList, and playerTwoActionList to null. */
+    public void resetCombatSubstate() { selectedLane = null; resolvedLanes = null; playerOneActionList = null; playerTwoActionList = null; }
     public void setGameResult(List<GameResult> result) { this.gameResult = result; }
 
     public List<CardInstance> getCardsFromTopOfDeck(SideID deckSide, int numOfCards) {
@@ -160,12 +149,22 @@ public final class GameState {
         }
         else {
             if (newPosition.getBoardLocation() == BoardLocation.FIELD) {
-                getCommander(card.getUser()).removeCard(card.getInstanceID(), card.getPosition().getBoardLocation());
+                getCommander(card.getUser()).removeCard(card, card.getPosition().getBoardLocation());
                 field.moveCard(card, newPosition);
             }
-            if (!getCommander(card.getUser()).moveCard(card, newPosition)) {
+            else if (!getCommander(card.getUser()).moveCard(card, newPosition)) {
                 throw new IllegalStateException("Card not removed from original pile / hand position.");
             }
+        }
+    }
+
+    /** Removes the given card from the game. It just removes the card. */
+    public void removeFromGame(CardInstance card) {
+        if (card.getPosition().getBoardLocation() == BoardLocation.FIELD) {
+            field.removeCard(card.getInstanceID());
+        }
+        else {
+            getCommander(card.getUser()).removeCard(card, card.getPosition().getBoardLocation());
         }
     }
 
@@ -223,10 +222,11 @@ public final class GameState {
         return getLivingObjects().stream().filter(filter).toList();
     }
 
+    /** May return null. */
     public LivingObject getLivingObject(int instanceID) {
         if (instanceID == 0) return null;
         for (LivingObject check : getLivingObjects()) if (check.getInstanceID() == instanceID) return check;
-        throw new IllegalArgumentException("No LivingObject exists with an id of " + instanceID);
+        return null;
     }
     /** Returns a List of LivingObject whose originalID is the same. Use for "Exclusive" which checks across all cards with the same type. */
     public List<LivingObject> getOriginalLiving(int originalID) {
@@ -253,7 +253,6 @@ public final class GameState {
      * 4. A card's attribute is "None"
      * 5. A card in a pile / the hand has a controller other than SideID.Neutral
      * 6. A card has the incorrect BoardPosition for where it is (e.g. a card's Position variable having HAND_ONE while its on the field.)
-     * 7. A commander has negative material
      */
     public void checkLegalGamestate() {
         // 1 & 2. the key is the instanceID, the value is the Priority

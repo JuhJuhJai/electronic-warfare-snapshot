@@ -16,6 +16,5 @@ public enum CardAttribute {
     Ritual;
 
     public boolean isCopyable() { return this.ordinal() > 0; }
-
     public int toDeclared() { return this.ordinal(); }
 }

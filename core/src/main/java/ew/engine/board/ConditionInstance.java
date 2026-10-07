@@ -25,7 +25,7 @@ public class ConditionInstance extends Condition implements EffectStipulationObj
     ArrayList<TargetType> targetInstance;
     VariableGameNum checkInstance;
     List<ConditionInstance> instanceConditions;
-    final EffectChangeInstance effectChangeFron;
+    final EffectChangeInstance effectChangeFrom;
 
     LivingObject user;
     final int effectInstanceID; // effectID's can conflict with living objects. They aren't living objects.
@@ -53,7 +53,14 @@ public class ConditionInstance extends Condition implements EffectStipulationObj
     public int getTimesUsedThisTurn() { return timesUsed; }
     public boolean isNegated() { return isNegated; }
     public LivingObject getUser() { return user; }
-    public EffectChangeInstance getEffectChangeFrom() { return effectChangeFron; }
+    public EffectChangeInstance getEffectChangeFrom() { return effectChangeFrom; }
+    public boolean isCost() {
+        return this.getEffectFrom().getInstanceCost().stream()
+            .map(EffectChangeInstance::getInstanceConditions)
+            .flatMap(List::stream)
+            .toList()
+            .contains(this);
+    }
 
     public void setInstanceConditions(List<ConditionInstance> conditions) { this.instanceConditions = (ArrayList<ConditionInstance>) conditions; }
     public void setTypeInstance(ConditionType conditionType) { this.typeInstance = conditionType; }
@@ -77,7 +84,7 @@ public class ConditionInstance extends Condition implements EffectStipulationObj
         for (Condition checkCondition : condition.getCheckConditions()) {
             instanceConditions.add(new ConditionInstance(checkCondition, owner, nextEffectIDs, changeFrom));
         }
-        this.effectChangeFron = null;
+        this.effectChangeFrom = null;
     }
 
     public ConditionInstance(Condition condition, LivingObject owner, AtomicInteger nextEffectIDs, EffectChangeInstance changeFrom) {
@@ -93,6 +100,19 @@ public class ConditionInstance extends Condition implements EffectStipulationObj
         for (Condition checkCondition : condition.getCheckConditions()) {
             instanceConditions.add(new ConditionInstance(checkCondition, owner, nextEffectIDs, changeFrom));
         }
-        this.effectChangeFron = changeFrom;
+        this.effectChangeFrom = changeFrom;
+    }
+
+    public ConditionInstance(ConditionInstance condition) {
+        super (condition.getCheckConditions(), condition.getType(), condition.getTarget(), condition.getCheck());
+        this.owner = condition.getOwner();
+        this.changeFrom = condition.getEffectFrom();
+        this.user = condition.getUser();
+        this.effectInstanceID = condition.getEffectID();
+        this.typeInstance = condition.getType();
+        this.targetInstance = (ArrayList<TargetType>) condition.getTarget();
+        this.checkInstance = condition.getCheck();
+        this.instanceConditions = condition.getInstanceConditions().stream().toList();
+        this.effectChangeFrom = condition.getEffectChangeFrom();
     }
 }

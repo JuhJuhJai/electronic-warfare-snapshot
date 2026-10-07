@@ -17,13 +17,15 @@ public final class Target extends EffectChange {
         super (targetCondition, targetType, stipulations, numOfTargets, targetDuration);
     }
 
-    /** TargetType must be EffectChangeType UniqueTarget, MultiTarget, RandomTarget, or RandomMultiTarget. */
+    /** TargetType must be EffectChangeType that mentions Target. Makes the target a UniqueTarget. */
     public static Target of(EffectChangeType targetType, List<TargetType> stipulations, VariableGameNum numOfTargets) {
         switch (targetType) {
-            case UniqueTarget, MultiTarget, RandomTarget, RandomMultiTarget -> {}
+            case UniqueTarget, MultiTarget, RandomUniqueTarget, RandomMultiTarget,
+                 AdjacentTarget, AdjacentToOriginalTarget, NonAdjacentTarget,
+                 SameLaneTarget, SameFileTarget, TargetAll -> {}
             default -> throw new IllegalArgumentException("Invalid targetType for target constructor (" + targetType + ")");
         }
-        return new Target(EffectChangeType.UniqueTarget, List.of(), stipulations, numOfTargets, EffectDuration.EFFECT_END());
+        return new Target(targetType, List.of(), stipulations, numOfTargets, EffectDuration.EFFECT_END());
     }
 
     public static Target of(EffectChangeType targetType, TargetType stipulations, VariableGameNum numOfTargets) {
@@ -38,7 +40,7 @@ public final class Target extends EffectChange {
         return Target.of(targetType, List.of(stipulations), VariableGameNum.Num(numOfTargets));
     }
 
-    // Targeting explicitly one card is a MultiTarget as effects could theoretically raise the number of targets, which wouldn't hold them to targeting different things.
+    // Targeting explicitly one card is a "MultiTarget" because effects could theoretically raise the number of targets, which wouldn't hold them to targeting different things.
     public static Target of(List<TargetType> stipulations) {
         return Target.of(EffectChangeType.MultiTarget, stipulations, VariableGameNum.ONE());
     }
@@ -60,7 +62,9 @@ public final class Target extends EffectChange {
     /** TargetType must be EffectChangeType UniqueTarget, MultiTarget, RandomTarget, or RandomMultiTarget. */
     public static Target conditional(EffectChangeType targetType, List<Condition> targetCondition, List<TargetType> stipulations, VariableGameNum numOfTargets) {
         switch (targetType) {
-            case UniqueTarget, MultiTarget, RandomTarget, RandomMultiTarget -> {}
+            case UniqueTarget, MultiTarget, RandomUniqueTarget, RandomMultiTarget,
+                 AdjacentTarget, AdjacentToOriginalTarget, NonAdjacentTarget,
+                 SameLaneTarget, SameFileTarget, TargetAll -> {}
             default -> throw new IllegalArgumentException("Invalid targetType for target constructor (" + targetType + ")");
         }
         return new Target(targetType, targetCondition, stipulations, numOfTargets, EffectDuration.EFFECT_END());
@@ -101,7 +105,9 @@ public final class Target extends EffectChange {
     /** TargetType must be EffectChangeType UniqueTarget, MultiTarget, RandomTarget, or RandomMultiTarget. */
     public static Target pattern(EffectChangeType targetType, List<Condition> condition, List<TargetType> stipulations, Boolean[][] pattern, VariableGameNum numOfTargets) {
         switch (targetType) {
-            case UniqueTarget, MultiTarget, RandomTarget, RandomMultiTarget -> {}
+            case UniqueTarget, MultiTarget, RandomUniqueTarget, RandomMultiTarget,
+                 AdjacentTarget, AdjacentToOriginalTarget, NonAdjacentTarget,
+                 SameLaneTarget, SameFileTarget, TargetAll -> {}
             default -> throw new IllegalArgumentException("Invalid targetType for target constructor (" + targetType + ")");
         }
         return new Target(targetType,

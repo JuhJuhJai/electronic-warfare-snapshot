@@ -4,13 +4,14 @@ package ew.engine.board;
 public enum SideID {
     ONE,
     TWO,
-    NEUTRAL;
+    NEUTRAL, // Neither
+    OMNI; // Perspective that shows everything, including cards in deck and their position, etc
 
-    public SideID opponent() {
+    public SideID opponentOf() {
         return switch(this) {
             case ONE -> SideID.TWO;
             case TWO -> SideID.ONE;
-            case NEUTRAL -> SideID.NEUTRAL;
+            case NEUTRAL, OMNI -> null;
         };
     }
 }

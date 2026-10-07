@@ -1,5 +1,7 @@
 package ew.server;
 
+import ew.engine.board.GameStateView;
+import ew.engine.board.SideID;
 import ew.engine.resolver.*;
 import ew.playerData.Commander;
 
@@ -16,7 +18,8 @@ public final class TestRoom implements Room {
     final Engine engine;
     final Log log = new Log();
     final MatchFormat format;
-    GameResult result = null;
+    boolean gameGoing = false;
+    List<GameResult> result = null;
 
     final ControllerInstance controller1;
     final ControllerInstance controller2;
@@ -42,6 +45,12 @@ public final class TestRoom implements Room {
             two, two.getSavedDecks().get(two.getSelectedDeck()));
     }
 
+    public void start() {
+        gameGoing = true;
+        result = engine.start();
+        gameGoing = false;
+    }
+    public boolean isGameGoing() { return gameGoing; }
     public long getRoomID() { return roomID; }
     public long getSeed() { return seed; }
     public ControllerInstance getController1() { return controller1; }
@@ -54,8 +63,7 @@ public final class TestRoom implements Room {
     public List<Commander> getSpectators()     { return spectators; }
     public Log getLog()                        { return log; }
     /** Returns null if the game isn't finished. */
-    public GameResult getGameResult() { return result; }
-    public void setResult(GameResult result)        { this.result = result; } // Used by the match.
+    public List<GameResult> getGameResult() { return result; }
 
     /** Adds a commander to a list of spectators, who can receive log events and gamestate updates. Returns whether a commander was successfully added. */
     public boolean addSpectator(Commander joiningCommander) {
@@ -67,6 +75,7 @@ public final class TestRoom implements Room {
     /**
      * Given a commander and matchID, get the current choices available for that commander to make.
      * Throws IllegalArgumentException when the matchID doesn't match to a commander.
+     * Returns null if no effect is there.
      */
     public List<GameChoice> getNextEffect(long commanderID) {
         if (controller1.getCommander().getPlayerID() == commanderID) return controller1.getNextChoice();
@@ -77,6 +86,7 @@ public final class TestRoom implements Room {
     /**
      * Given a commander and matchID, get the current choices available for that commander to make.
      * Throws IllegalArgumentException when the matchID doesn't match to a commander.
+     * Returns null if no change is there.
      */
     public List<List<GameChoiceChange>> getNextChange(long commanderID) {
         if (controller1.getCommander().getPlayerID() == commanderID) return controller1.getNextChange();
@@ -84,6 +94,11 @@ public final class TestRoom implements Room {
         throw new IllegalArgumentException(commanderID + " isn't a controller in " + this);
     }
 
+    /**
+     * Given a commander and matchID, get the current numbers available for that commander to choose.
+     * Throws IllegalArgumentException when the matchID doesn't match to a commander.
+     * Returns null if no number is there.
+     */
     public List<Integer> getNextNumber(long commanderID) {
         if (controller1.getCommander().getPlayerID() == commanderID) return controller1.getNextNumber();
         if (controller2.getCommander().getPlayerID() == commanderID) return controller2.getNextNumber();
@@ -115,5 +130,13 @@ public final class TestRoom implements Room {
                 .toList();
         }
         throw new IllegalArgumentException("Given commanderID " + commanderID + " isn't in this room.");
+    }
+
+    public GameStateView getView(long commanderID) {
+        if (controller1.getCommander().getPlayerID() == commanderID) return engine.getGameView(SideID.ONE);
+        if (controller2.getCommander().getPlayerID() == commanderID) return engine.getGameView(SideID.TWO);
+        if (spectators.stream().map(Commander::getPlayerID).anyMatch(c -> c == commanderID))
+            return engine.getGameView(SideID.NEUTRAL);
+        throw new IllegalArgumentException("Given commanderID (" + commanderID + ") isn't in this room.");
     }
 }

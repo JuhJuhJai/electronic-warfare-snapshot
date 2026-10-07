@@ -135,6 +135,7 @@ public enum CounterType {
         };
     }
 
+    /** Returns the counter that corresponds to the given ConditionType. (e.g. MinFrozenCounters = CounterType.Frozen) */
     public static CounterType convertCounter(ConditionType counterChecker) {
         return switch (counterChecker) {
             case MinFortificationCounters -> CounterType.Fortification;

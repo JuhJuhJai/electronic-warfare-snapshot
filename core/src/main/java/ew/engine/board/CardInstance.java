@@ -1,9 +1,12 @@
 package ew.engine.board;
 
-import ew.engine.cards.effects.*;
+import ew.engine.cards.CardAttribute;
+import ew.engine.cards.CardDefinition;
+import ew.engine.cards.CardRarity;
+import ew.engine.cards.CardType;
+import ew.engine.cards.effects.Effect;
 import ew.playerData.CardModifier;
 import ew.playerData.CardStored;
-import ew.engine.cards.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,7 +28,7 @@ public final class CardInstance implements LivingObject {
     final CardType type;
     final CardAttribute attribute;
     final int health;
-    final boolean isToken;
+    final boolean isOriginallyToken;
     final boolean isDecisive;
     final Effect placeCost;
     final List<Effect> effects;
@@ -69,9 +72,9 @@ public final class CardInstance implements LivingObject {
     int Qvariable = 0;
     int declaredNum = 0;
     int declaredName = 0; // x = cardID associated with declared name in CardDefinition
-    int declaredAttribute = 0; // x = ordinal of card attribute (1 = Human, 2 = Machine, etc.)
-    int declaredPile = 0; // x = ordinal of board location (1 = COMMANDER_ONE, 2 = DECK_ONE, etc.)
-    int declaredDirection = 0; // 1 = forwards, then clockwise.
+    CardAttribute declaredAttribute = null;
+    Pile declaredPile = null;
+    Direction declaredDirection = null;
     List<Integer> declaredChoice =  new ArrayList<>(2); // for "Choose x: ..." effects.
 
     public CardInstance(CommanderInstance owner, CardStored card, AtomicInteger nextCardIDs, AtomicInteger nextEffectIDs) {
@@ -83,7 +86,7 @@ public final class CardInstance implements LivingObject {
         this.type = reference.type;
         this.attribute = reference.attribute;
         this.health = reference.health;
-        this.isToken = reference.isToken;
+        this.isOriginallyToken = reference.isToken;
         this.isDecisive = reference.isDecisive;
         this.placeCost = reference.placeCost;
         this.effects = reference.effects;
@@ -92,12 +95,12 @@ public final class CardInstance implements LivingObject {
         this.healthInstance = health;
         this.attributeInstance = attribute;
         this.nameInstance = name;
-        this.isTokenInstance = isToken;
+        this.isTokenInstance = isOriginallyToken;
         this.isDecisiveInstance = isDecisive;
 
         this.owner = owner;
         this.user = owner.getSide();
-        this.position = owner.getSide() == SideID.ONE ? new Position(BoardLocation.DECK_ONE, CardRideState.NORMAL, owner.getDeck().size()) : new Position(BoardLocation.DECK_TWO, CardRideState.NORMAL, owner.getDeck().size());
+        this.position = owner.getSide() == SideID.ONE ? new Position(BoardLocation.DECK_ONE, CardRideState.NORMAL, owner.getDeck().contents.size()) : new Position(BoardLocation.DECK_TWO, CardRideState.NORMAL, owner.getDeck().contents.size());
         this.modifier = card.modifier();
         this.cardInstanceId = this.cardPriority = nextCardIDs.getAndIncrement();
         this.instancedPlaceCost = new EffectInstance(placeCost, this, nextEffectIDs);
@@ -114,7 +117,7 @@ public final class CardInstance implements LivingObject {
         this.type = reference.type;
         this.attribute = reference.attribute;
         this.health = reference.health;
-        this.isToken = reference.isToken;
+        this.isOriginallyToken = reference.isToken;
         this.isDecisive = reference.isDecisive;
         this.placeCost = reference.placeCost;
         this.effects = reference.effects;
@@ -123,12 +126,14 @@ public final class CardInstance implements LivingObject {
         this.healthInstance = health;
         this.attributeInstance = attribute;
         this.nameInstance = name;
-        this.isTokenInstance = isToken;
+        this.isTokenInstance = isOriginallyToken;
         this.isDecisiveInstance = isDecisive;
 
         this.owner = owner;
         this.user = owner.getSide();
-        this.position = owner.getSide() == SideID.ONE ? new Position(BoardLocation.DECK_ONE, CardRideState.NORMAL, owner.getDeck().size()) : new Position(BoardLocation.DECK_TWO, CardRideState.NORMAL, owner.getDeck().size());
+        this.position = owner.getSide() == SideID.ONE ?
+            new Position(BoardLocation.DECK_ONE, CardRideState.NORMAL, owner.getDeck().contents.size())
+            : new Position(BoardLocation.DECK_TWO, CardRideState.NORMAL, owner.getDeck().contents.size());
         this.modifier = CardModifier.NORMAL;
         this.cardInstanceId = this.cardPriority = nextCardIDs.getAndIncrement();
         this.instancedPlaceCost = new EffectInstance(placeCost, this, nextEffectIDs);
@@ -164,10 +169,10 @@ public final class CardInstance implements LivingObject {
     public int getQ()                   { return Qvariable; }
     public int getDeclaredNum()         { return declaredNum; }
     public int getDeclaredName()        { return declaredName; }
-    public int getDeclaredAttribute()   { return declaredAttribute; }
-    public int getDeclaredPile()        { return declaredPile; }
-    public int getDeclaredDirection()   { return declaredDirection; }
-    public List<Integer> getDeclaredChoices()      { return declaredChoice; }
+    public CardAttribute getDeclaredAttribute()   { return declaredAttribute; }
+    public Pile getDeclaredPile()        { return declaredPile; }
+    public Direction getDeclaredDirection() { return declaredDirection; }
+    public List<Integer> getDeclaredChoices() { return declaredChoice; }
     public boolean isNegated()          { return isNegated; }
     public List<CounterType> getCounters()  { return counters; }
     public boolean hasCounter(CounterType counter) { return counters.contains(counter); }
@@ -186,7 +191,7 @@ public final class CardInstance implements LivingObject {
     public boolean isDestroyed()        { return isDestroyed; }
     public boolean isExcavated()        { return isExcavated; }
     public boolean isSearched()         { return isSearched; }
-    public boolean isToken()            { return isToken; }
+    public boolean isOriginallyToken()  { return isOriginallyToken; }
     public boolean isDecisive()         { return isDecisive; }
     public boolean isTokenInstance()    { return isTokenInstance; }
     public boolean isDecisiveInstance() { return isDecisiveInstance; }
@@ -205,9 +210,9 @@ public final class CardInstance implements LivingObject {
     public void setQ(int q)             { Qvariable = q; }
     public void setDeclaredNum(int d)   { declaredNum = d; }
     public void setDeclaredName(int d)  { declaredName = d; }
-    public void setDeclaredAttribute(int d)   { declaredAttribute = d; }
-    public void setDeclaredPile(int d)  { declaredPile = d; }
-    public void setDeclaredDirection(int d)   { declaredDirection = d; }
+    public void setDeclaredAttribute(CardAttribute d)   { declaredAttribute = d; }
+    public void setDeclaredPile(Pile d)  { declaredPile = d; }
+    public void setDeclaredDirection(Direction d)   { declaredDirection = d; }
     public void setDeclaredChoices(List<Integer> choice) { declaredChoice = choice; }
     public void addEffect(EffectInstance effect) { this.instancedEffects.add(effect); }
     public void removeEffect(int effectID) { for (int i = 0; i < instancedEffects.size(); i++) if (instancedEffects.get(i).getEffectID() == effectID) { instancedEffects.remove(i); return; }

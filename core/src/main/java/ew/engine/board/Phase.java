@@ -10,4 +10,14 @@ public enum Phase {
     TUTORIAL;
 
     public int getPhaseNum() { return ordinal(); }
+    public Phase next() {
+        return switch(this) {
+            case SETUP -> Phase.DRAW;
+            case DRAW -> Phase.BUILD;
+            case BUILD -> Phase.COMBAT;
+            case COMBAT -> Phase.AFTERMATH;
+            case AFTERMATH -> Phase.DRAW;
+            default -> this;
+        };
+    }
 }

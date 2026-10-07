@@ -18,9 +18,8 @@ public class GameChoice {
         this.initialOptions = initialOptions;
     }
 
-    public static GameChoice NOT_USED() {
-        return new GameChoice(null, null);
-    }
+    public static GameChoice NOT_USED() { return new GameChoice(null, null); }
+    public static GameChoice PASS() { return new GameChoice(null, List.of()); }
 
     public boolean equals(Object other) {
         if (!(other instanceof GameChoice o)) return false;

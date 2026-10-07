@@ -11,12 +11,12 @@ public class TargetInstance {
     public void setTarget(Position newTarget) { this.target = newTarget; }
     public void setKnownTargetID(int newID) { this.knownTargetID = newID; }
 
-    /** Return if check is a target. Checks this class's knownTargetID and the check's BoardLocation, not lane and file position. */
+    /** Return if check is targeted by this. Checks this class's knownTargetID and the check's BoardLocation, not lane and file position. */
     public boolean isOffFieldTarget(LivingObject check) {
         return knownTargetID == check.getInstanceID() && target.getBoardLocation() == check.getPosition().getBoardLocation();
     }
 
-    /** Return if check is a target, including its Lane, File, Board Location, and CardField State. Does NOT check instanceID. */
+    /** Return if check is targeted by this, including its Lane, File, Board Location, and CardField State. Does NOT check instanceID. */
     public boolean isOnFieldTarget(LivingObject check) { return target == check.getPosition(); }
 
     public TargetInstance(Position target, int knownTargetID) {

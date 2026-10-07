@@ -5,8 +5,6 @@ import ew.engine.cards.effects.EffectChangeType;
 import ew.server.ControllerInstance;
 
 import java.util.ArrayList;import java.util.List;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 public class VariableGameNum {
     final int baseValue;
@@ -28,6 +26,16 @@ public class VariableGameNum {
 
     public static VariableGameNum Copy(VariableGameNum copyNum) {
         return new VariableGameNum(copyNum.baseValue, copyNum.type, copyNum.modifier, copyNum.min, copyNum.max, copyNum.isSet);
+    }
+
+    public static VariableGameNum CopyDifferentType(VariableGameNum copyNum, VariableNumType newType) {
+        return new VariableGameNum(copyNum.baseValue, newType, copyNum.modifier, copyNum.min, copyNum.max, copyNum.isSet);
+    }
+
+    /** Returns the copyNum's min if it has one, VariableGameNum.ONE otherwise. */
+    public static VariableGameNum MinCopy(VariableGameNum copyNum) {
+        if (copyNum.min != null) return copyNum.min;
+        return VariableGameNum.ONE();
     }
 
     public static VariableGameNum ZERO() {
@@ -73,11 +81,11 @@ public class VariableGameNum {
         return new VariableGameNum(0, VariableNumType.XNum, null, null, null, false);
     }
 
-    public static VariableGameNum XRoundedDown() {
+    public static VariableGameNum PreviousXRoundedDown() {
         return new VariableGameNum(0, VariableNumType.XHalvedDown, null, null, null, false);
     }
 
-    public static VariableGameNum XRoundedUp() {
+    public static VariableGameNum PreviousXRoundedUp() {
         return new VariableGameNum(0, VariableNumType.XHalvedUp, null, null, null, false);
     }
 
@@ -86,11 +94,11 @@ public class VariableGameNum {
         return new VariableGameNum(0, VariableNumType.QNum, null, null, null, false);
     }
 
-    public static VariableGameNum QRoundedUp() {
+    public static VariableGameNum PreviousQRoundedUp() {
         return new VariableGameNum(0, VariableNumType.QHalvedUp, null, null, null, false);
     }
 
-    public static VariableGameNum QRoundedDown() {
+    public static VariableGameNum PreviousQRoundedDown() {
         return new VariableGameNum(0, VariableNumType.QHalvedDown, null, null, null, false);
     }
 
@@ -136,9 +144,9 @@ public class VariableGameNum {
         return DefineQ(0, modifier, 0, 99);
     }
 
-    public int getBaseValue() {
-        return baseValue;
-    }
+    public VariableNumType getType() { return type; }
+
+    public VariableGameNum getModifier() { return modifier; }
 
     public int getValue(GameState state,
                         ControllerInstance chooser,
@@ -244,20 +252,20 @@ public class VariableGameNum {
             }
 
             case DeclaredAttribute -> {
-                return user.getDeclaredAttribute();
+                return user.getDeclaredAttribute().toDeclared();
             }
 
             case DeclaredPile -> {
-                return user.getDeclaredPile();
+                return user.getDeclaredPile().position.getBoardLocation().toDeclared();
             }
 
             case DeclaredDirection -> {
-                return user.getDeclaredDirection();
+                return user.getDeclaredDirection().toDeclared();
             }
 
             // Specific case
             case BonusOnOpponentsSide -> {
-                for (ZoneInstance zoneInstance : state.getField().getSide(user.getController().opponent())) {
+                for (ZoneInstance zoneInstance : state.field.getSide(user.getController().opponentOf())) {
                     for (CardInstance card : zoneInstance.getCards()) {
                         if (user.getInstanceID() == card.getInstanceID()) return baseValue + modifier.getValue(state, chooser, effectUsing, target, activeContinuous);
                     }

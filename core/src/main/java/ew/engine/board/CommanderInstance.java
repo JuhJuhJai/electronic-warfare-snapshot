@@ -1,12 +1,13 @@
 package ew.engine.board;
 
-import ew.engine.cards.CardType;
-import ew.playerData.Commander;
 import ew.engine.cards.CardAttribute;
+import ew.engine.cards.CardType;
 import ew.engine.cards.effects.*;
+import ew.playerData.Commander;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 /**
@@ -39,18 +40,18 @@ public final class CommanderInstance implements LivingObject {
     int Qvariable = 0;
     int declaredNum = 0;
     int declaredName = 0;
-    int declaredAttribute = 0;
-    int declaredPile = 0;
-    int declaredDirection = 0;
+    CardAttribute declaredAttribute = null;
+    Pile declaredPile = null;
+    Direction declaredDirection = null;
     List<Integer> declaredChoice = new ArrayList<>(2);
 
-    // Piles. Index 0 is the top of the pile, which only mostly matters for the draw pile. Cards can gain a rider in every pile.
-    final List<CardInstance> hand          = new ArrayList<>(11);
-    final List<CardInstance> drawPile      = new ArrayList<CardInstance>(60);
-    final List<CardInstance> destroyedPile = new ArrayList<CardInstance>(); // CR4.2.2
-    final List<CardInstance> discardPile   = new ArrayList<CardInstance>(); // CR4.2.3
-    final List<CardInstance> displacedPile = new ArrayList<CardInstance>(); // CR4.2.5
-    final List<CardInstance> decisivePile  = new ArrayList<CardInstance>(2); // CR4.2.4 (0-2 decisive cards)
+    // Piles. The top of the pile is the end of the pile.
+    final Pile hand;
+    final Pile drawPile;
+    final Pile destroyedPile;
+    final Pile discardPile;
+    final Pile displacedPile;
+    final Pile decisivePile;
 
     boolean passed = false; // unable to place any more cards by opportunity to play once passing.
     boolean negated = false;
@@ -66,6 +67,13 @@ public final class CommanderInstance implements LivingObject {
         this.position = sideID == SideID.ONE ? Position.COMMANDER_ONE() : Position.COMMANDER_TWO();
         this.priority = instanceID;
         for (Effect effect : effects) this.instancedEffects.add(new EffectInstance(effect, this, nextEffectIDs));
+
+        hand          = new Pile(PileType.Hand, sideID, new ArrayList<>(10));
+        drawPile      = new Pile(PileType.Deck, sideID, new ArrayList<>(60));
+        destroyedPile = new Pile(PileType.DestroyedPile, sideID, new ArrayList<>());
+        discardPile   = new Pile(PileType.DiscardPile, sideID, new ArrayList<>());
+        displacedPile = new Pile(PileType.DisplacedPile, sideID, new ArrayList<>());
+        decisivePile  = new Pile(PileType.DecisiveDeck, sideID, new ArrayList<>(2)); // (0-2 decisive cards)
     }
 
     @Override
@@ -102,14 +110,14 @@ public final class CommanderInstance implements LivingObject {
     public int getQ()                   { return Qvariable; }
     public int getDeclaredNum()         { return declaredNum; }
     public int getDeclaredName()        { return declaredName; }
-    public int getDeclaredAttribute()   { return declaredAttribute; }
-    public int getDeclaredPile()        { return declaredPile; }
-    public int getDeclaredDirection()   { return declaredDirection; }
+    public CardAttribute getDeclaredAttribute()   { return declaredAttribute; }
+    public Pile getDeclaredPile()        { return declaredPile; }
+    public Direction getDeclaredDirection()   { return declaredDirection; }
     public List<Integer> getDeclaredChoices()      { return declaredChoice; }
     public SideID getOwner()            { return sideID; }
     public SideID getController()       { return sideID; }
     public SideID getUser()             { return sideID; }
-    public int getOriginalID()          { return instanceID * -1; }
+    public int getOriginalID()          { return -1; } // Commanders have the same originalID.
     public int getInstanceID()          { return instanceID; }
     public int getPriority()            { return priority; }
     public List<TargetInstance> getTarget() { return target; }
@@ -128,7 +136,7 @@ public final class CommanderInstance implements LivingObject {
     public boolean isDestroyed()        { return isDestroyed; } // Winning the game checks isDestroyed.
     public boolean isExcavated()        { return false; }
     public boolean isSearched()         { return false; }
-    public boolean isToken()            { return false; }
+    public boolean isOriginallyToken()  { return false; }
     public boolean isDecisive()         { return false; }
     public boolean isTokenInstance()    { return false; }
     public boolean isDecisiveInstance() { return false; }
@@ -137,23 +145,24 @@ public final class CommanderInstance implements LivingObject {
     public EffectInstance getInstancedPlaceCost() { return null; }
     public List<Integer> getUsedByEffectID() { return usedByEffectID; }
 
-    public List<CardInstance> getHand()          { return hand; }
-    public List<CardInstance> getDeck()          { return drawPile; }
-    public List<CardInstance> getDestroyedPile() { return destroyedPile; }
-    public List<CardInstance> getDiscardPile()   { return discardPile; }
-    public List<CardInstance> getDisplacedPile() { return displacedPile; }
-    public List<CardInstance> getDecisivePile()  { return decisivePile; }
+    public Pile getHand()          { return hand; }
+    public Pile getDeck()          { return drawPile; }
+    public Pile getDestroyedPile() { return destroyedPile; }
+    public Pile getDiscardPile()   { return discardPile; }
+    public Pile getDisplacedPile() { return displacedPile; }
+    public Pile getDecisivePile()  { return decisivePile; }
 
     /** Doesn't return cards a commander controls on the field. Use field.getCards() for that. */
     public List<CardInstance> getCards() {
         return Stream.of(hand, drawPile, destroyedPile, discardPile, displacedPile, decisivePile)
+            .map(pile -> pile.contents)
             .flatMap(List::stream)
             .toList();
     }
 
     public List<CardInstance> getCardsFromTopOfDeck(int numOfCards) {
         if (numOfCards < 0) throw new IllegalArgumentException("Must get 0 or more cards from the top of the deck.");
-        return drawPile.subList(0, numOfCards - 1);
+        return drawPile.contents.subList(drawPile.contents.size() - 1 - numOfCards, drawPile.contents.size() - 1);
     }
 
     // Low level state setters. Exceptions may be thrown for LivingObject cases that do not apply to Commanders.
@@ -192,9 +201,9 @@ public final class CommanderInstance implements LivingObject {
     public void setQ(int q)                 { Qvariable = q; }
     public void setDeclaredNum(int d)       { declaredNum = d; }
     public void setDeclaredName(int d)      { declaredName = d; }
-    public void setDeclaredAttribute(int d) { declaredAttribute = d; }
-    public void setDeclaredPile(int d)      { declaredPile = d; }
-    public void setDeclaredDirection(int d) { declaredDirection = d; }
+    public void setDeclaredAttribute(CardAttribute d) { declaredAttribute = d; }
+    public void setDeclaredPile(Pile d)      { declaredPile = d; }
+    public void setDeclaredDirection(Direction d) { declaredDirection = d; }
     public void setDeclaredChoices(List<Integer> choice) { declaredChoice = choice; }
     public void addEffect(EffectInstance effect) { this.instancedEffects.add(effect); }
     public void removeEffect(int effectID) { for (int i = 0; i < instancedEffects.size(); i++) if (instancedEffects.get(i).getEffectID() == effectID) { instancedEffects.remove(i); return; }
@@ -240,65 +249,27 @@ public final class CommanderInstance implements LivingObject {
      * Does not change face-up face-down status of the card.
      */
     public boolean moveCard(CardInstance card, Position newPosition) {
+        Consumer<Pile> move = p -> {
+            removeCard(card, card.getPosition().getBoardLocation());
+            p.contents.add(card);
+            card.setPosition(newPosition);
+        };
         boolean wasRemoved = true;
         switch (newPosition.getBoardLocation()) {
             case DECK_ONE, DECK_TWO -> { // It's the match's job to shuffle after adding a card to the deck.
-                try { removeCard(card.getInstanceID(), card.getPosition().getBoardLocation()); }
-                catch (IllegalStateException e) {
-                    wasRemoved = false;
-                }
-                drawPile.add(card);
-                card.setPosition(newPosition);
-            }
+                move.accept(drawPile); }
 
-            case HAND_ONE, HAND_TWO -> {
-                try { removeCard(card.getInstanceID(), card.getPosition().getBoardLocation()); }
-                catch (IllegalStateException e) {
-                    wasRemoved = false;
-                }
-                hand.add(card);
-                card.setPosition(newPosition);
-            }
+            case HAND_ONE, HAND_TWO -> move.accept(hand);
 
-            case DESTROYED_PILE_ONE, DESTROYED_PILE_TWO -> {
-                try { removeCard(card.getInstanceID(), card.getPosition().getBoardLocation()); }
-                catch (IllegalStateException e) {
-                    wasRemoved = false;
-                }
-                destroyedPile.add(card);
-                card.setPosition(newPosition);
-            }
+            case DESTROYED_PILE_ONE, DESTROYED_PILE_TWO -> move.accept(destroyedPile);
 
-            case DISCARD_PILE_ONE , DISCARD_PILE_TWO -> {
-                try { removeCard(card.getInstanceID(), card.getPosition().getBoardLocation()); }
-                catch (IllegalStateException e) {
-                    wasRemoved = false;
-                }
-                discardPile.add(card);
-                card.setPosition(newPosition);
-            }
+            case DISCARD_PILE_ONE , DISCARD_PILE_TWO -> move.accept(discardPile);
 
-            case DISPLACED_PILE_ONE, DISPLACED_PILE_TWO -> {
-                try { removeCard(card.getInstanceID(), card.getPosition().getBoardLocation()); }
-                catch (IllegalStateException e) {
-                    wasRemoved = false;
-                }
-                displacedPile.add(card);
-                card.setPosition(newPosition);
-            }
 
-            case DECISIVE_PILE_ONE, DECISIVE_PILE_TWO -> {
-                try { removeCard(card.getInstanceID(), card.getPosition().getBoardLocation()); }
-                catch (IllegalStateException e) {
-                    wasRemoved = false;
-                }
-                decisivePile.add(card);
-                card.setPosition(newPosition);
-            }
+            case DISPLACED_PILE_ONE, DISPLACED_PILE_TWO -> move.accept(displacedPile);
 
-            case FIELD -> {
-                throw new IllegalArgumentException("Invalid place for a commander to add a card. (A commander doesn't add to the field)");
-            }
+
+            case DECISIVE_PILE_ONE, DECISIVE_PILE_TWO -> move.accept(decisivePile);
 
             default -> throw new IllegalArgumentException(this + " cannot add a card to " + newPosition);
         }
@@ -306,20 +277,23 @@ public final class CommanderInstance implements LivingObject {
     }
 
     /** Removes a card from a commander's lists if it's in the location. */
-    public void removeCard(int cardID, BoardLocation location) throws IllegalStateException {
+    public void removeCard(CardInstance card, BoardLocation location) throws IllegalStateException {
+        Consumer<Pile> remove = p -> {
+            for (int i = 0; i < p.contents.size(); i++) {
+                if (p.contents.get(i).equals(card)) {
+                    p.contents.remove(i);
+                    return;
+                }
+            }
+            throw new IllegalArgumentException(card + " not fount at " + location + " for " + this);
+        };
         switch(location) {
-            case DECK_ONE, DECK_TWO -> { for (int i = 0; i < drawPile.size(); i++) if (drawPile.get(i).getInstanceID() == cardID) { drawPile.remove(i); return; }
-                throw new IllegalStateException(cardID + " not found at " + location + " for " + this); }
-            case HAND_ONE, HAND_TWO -> { for (int i = 0; i < hand.size(); i++) if (hand.get(i).getInstanceID() == cardID) { hand.remove(i); return; }
-                throw new IllegalStateException(cardID + " not found at " + location + " for " + this); }
-            case DESTROYED_PILE_ONE, DESTROYED_PILE_TWO -> { for (int i = 0; i < destroyedPile.size(); i++) if (destroyedPile.get(i).getInstanceID() == cardID) { destroyedPile.remove(i); return; }
-                throw new IllegalStateException(cardID + " not found at " + location + " for " + this); }
-            case DISCARD_PILE_ONE , DISCARD_PILE_TWO -> { for (int i = 0; i < discardPile.size(); i++) if (discardPile.get(i).getInstanceID() == cardID) { discardPile.remove(i); return; }
-                throw new IllegalStateException(cardID + " not found at " + location + " for " + this); }
-            case DISPLACED_PILE_ONE, DISPLACED_PILE_TWO -> { for (int i = 0; i < displacedPile.size(); i++) if (displacedPile.get(i).getInstanceID() == cardID) { displacedPile.remove(i); return; }
-                throw new IllegalStateException(cardID + " not found at " + location + " for " + this); }
-            case DECISIVE_PILE_ONE, DECISIVE_PILE_TWO -> { for (int i = 0; i < decisivePile.size(); i++) if (decisivePile.get(i).getInstanceID() == cardID) { decisivePile.remove(i); return; }
-                throw new IllegalStateException(cardID + " not found at " + location + " for " + this); }
+            case DECK_ONE, DECK_TWO -> { remove.accept(drawPile); }
+            case HAND_ONE, HAND_TWO -> { remove.accept(hand); }
+            case DESTROYED_PILE_ONE, DESTROYED_PILE_TWO -> { remove.accept(destroyedPile); }
+            case DISCARD_PILE_ONE , DISCARD_PILE_TWO -> { remove.accept(discardPile); }
+            case DISPLACED_PILE_ONE, DISPLACED_PILE_TWO -> { remove.accept(displacedPile); }
+            case DECISIVE_PILE_ONE, DECISIVE_PILE_TWO -> { remove.accept(decisivePile); }
         }
     }
 
@@ -329,11 +303,11 @@ public final class CommanderInstance implements LivingObject {
      * this is the only check for deck position.
      */
      public void changeCardDeckPosition(int cardID, int newIndex) {
-        for (int i = 0; i < drawPile.size(); i++) {
-            if (drawPile.get(i).getInstanceID() == cardID) {
-                CardInstance temp = drawPile.get(i);
-                drawPile.remove(i);
-                drawPile.add(newIndex, temp);
+        for (int i = 0; i < drawPile.contents.size(); i++) {
+            if (drawPile.contents.get(i).getInstanceID() == cardID) {
+                CardInstance temp = drawPile.contents.get(i);
+                drawPile.contents.remove(i);
+                drawPile.contents.add(newIndex, temp);
                 break;
             }
         }
@@ -342,13 +316,13 @@ public final class CommanderInstance implements LivingObject {
      /** Shuffles this commander's deck using the Fisher-Yates algorithm. */
      public void shuffleDeck(long shuffleRandomness) {
          Random random = new Random(shuffleRandomness);
-         for (int i = drawPile.size() - 1; i > 0; i--) {
+         for (int i = drawPile.contents.size() - 1; i > 0; i--) {
              int j = random.nextInt(i); // random index from 0 to i
-             CardInstance temp = drawPile.get(i);
-             drawPile.remove(i);
-             drawPile.add(i, drawPile.get(j));
-             drawPile.remove(j);
-             drawPile.add(j, temp);
+             CardInstance temp = drawPile.contents.get(i);
+             drawPile.contents.remove(i);
+             drawPile.contents.add(i, drawPile.contents.get(j));
+             drawPile.contents.remove(j);
+             drawPile.contents.add(j, temp);
          }
      }
 
@@ -357,9 +331,9 @@ public final class CommanderInstance implements LivingObject {
      * (CR13.12.1). The terminator piles are destroyed, discarded, and displaced.
      */
     public int getPrecision() {
-        int d = destroyedPile.size();
-        int x = discardPile.size();
-        int p = displacedPile.size();
+        int d = destroyedPile.contents.size();
+        int x = discardPile.contents.size();
+        int p = displacedPile.contents.size();
         int max = Math.max(d, Math.max(x, p));
         int min = Math.min(d, Math.min(x, p));
         return Math.max(0, 5 - (max - min));
@@ -378,12 +352,7 @@ public final class CommanderInstance implements LivingObject {
     public final List<Effect> effects = new ArrayList<Effect>(Arrays.asList(
         Effect.ACTIVATABLE(
             "Place a card from your hand.",
-            new ArrayList<Condition>(List.of(
-                Condition.of(
-                    ConditionType.MinThings,
-                    List.of(TargetType.CardsInHand, TargetType.CardsYouUse, TargetType.PlacementCostIsMet),
-                    1)
-            )),
+            new ArrayList<Condition>(),
             new ArrayList<EffectChange>(List.of(
                 EffectChange.of(
                     EffectChangeType.Place,
@@ -393,12 +362,7 @@ public final class CommanderInstance implements LivingObject {
         ),
         Effect.ACTIVATABLE(
             "Place a face down decisive card from your decisive deck.",
-            new ArrayList<Condition>(List.of(
-                Condition.of(
-                    ConditionType.MinThings,
-                    List.of(TargetType.CardsInDecisiveDeck, TargetType.CardsYouOwn, TargetType.DecisiveCards, TargetType.FaceDownCards, TargetType.PlacementCostIsMet),
-                    1)
-            )),
+            new ArrayList<Condition>(),
             new ArrayList<EffectChange>(List.of(
                 EffectChange.of(
                     EffectChangeType.Place,
@@ -408,12 +372,7 @@ public final class CommanderInstance implements LivingObject {
         ),
         Effect.ACTIVATABLE(
             "Place a face up card from your decisive deck.",
-            new ArrayList<Condition>(List.of(
-                Condition.of(
-                    ConditionType.MinThings,
-                    List.of(TargetType.CardsInDecisiveDeck, TargetType.CardsYouOwn, TargetType.FaceUpCards, TargetType.PlacementCostIsMet),
-                    1)
-            )),
+            new ArrayList<Condition>(),
             new ArrayList<EffectChange>(List.of(
                 EffectChange.of(
                     EffectChangeType.Place,
@@ -423,12 +382,7 @@ public final class CommanderInstance implements LivingObject {
         ),
         Effect.ACTIVATABLE(
             "Unshroud a card you control that wasn't shrouded this turn.",
-            new ArrayList<Condition>(List.of(
-                Condition.of(
-                    ConditionType.MinThings,
-                    List.of(TargetType.CardsYouControl, TargetType.ShroudedCards, TargetType.CardsNotShroudedThisTurn),
-                    1)
-            )),
+            new ArrayList<Condition>(),
             new ArrayList<EffectChange>(List.of(
                 EffectChange.of(
                     EffectChangeType.Unshroud,
@@ -438,12 +392,7 @@ public final class CommanderInstance implements LivingObject {
         ),
         Effect.ACTIVATABLE(
             "Destroy a production card you control on a production zone.",
-            new ArrayList<Condition>(List.of(
-                Condition.of(
-                    ConditionType.MinThings,
-                    List.of(TargetType.CardsYouControl, TargetType.ProductionZones, TargetType.ProductionCards),
-                    1)
-            )),
+            new ArrayList<Condition>(),
             new ArrayList<EffectChange>(List.of(
                 EffectChange.of(
                     EffectChangeType.Destroy,

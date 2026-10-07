@@ -2,28 +2,38 @@ package ew.engine.board;
 
 public enum BoardLocation {
     /** This position is used only for zones that are not usable in the game. */
-    BOARD,
+    BOARD(false),
 
-    FIELD,
+    FIELD(true),
 
-    COMMANDER_ONE, // used for direct targets on commander one
-    DECK_ONE,
-    HAND_ONE,
-    DECISIVE_PILE_ONE,
-    DESTROYED_PILE_ONE,
-    DISCARD_PILE_ONE,
-    DISPLACED_PILE_ONE,
+    COMMANDER_ONE(true), // used for direct targets on commander one
+    DECK_ONE(false),
+    HAND_ONE(false),
+    DECISIVE_PILE_ONE(false),
+    DESTROYED_PILE_ONE(true),
+    DISCARD_PILE_ONE(true),
+    DISPLACED_PILE_ONE(true),
 
-    COMMANDER_TWO, // used for direct targets on commander two
-    DECK_TWO,
-    HAND_TWO,
-    DECISIVE_PILE_TWO,
-    DESTROYED_PILE_TWO,
-    DISCARD_PILE_TWO,
-    DISPLACED_PILE_TWO;
+    COMMANDER_TWO(true), // used for direct targets on commander two
+    DECK_TWO(false),
+    HAND_TWO(false),
+    DECISIVE_PILE_TWO(false),
+    DESTROYED_PILE_TWO(true),
+    DISCARD_PILE_TWO(true),
+    DISPLACED_PILE_TWO(true),
 
+    REMOVED_FROM_GAME(true);
+
+    private final boolean isPublic;
+
+    BoardLocation(boolean isPublic) { this.isPublic = isPublic; }
+
+    public boolean isPublicLocation() { return this.isPublic; }
     public int toDeclared() {
         return this.ordinal();
+    }
+    public static BoardLocation fromDeclared(int declared) {
+        return values()[declared];
     }
 
     /** This position is used only for zones that are not usable in the game. */

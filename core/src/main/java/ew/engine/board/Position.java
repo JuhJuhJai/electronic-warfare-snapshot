@@ -76,8 +76,8 @@ public class Position {
         this.file = 0;
     }
 
-    public static Position resolveFieldPosition(Position startPos) {
-        return resolveFieldPosition(startPos.lane, startPos.file, startPos.getRideState());
+    public static Position resolveFieldPosition(Position tryPos) {
+        return resolveFieldPosition(tryPos.lane, tryPos.file, tryPos.getRideState());
     }
 
     public static Position resolveFieldPosition(int tryLane, int tryFile, CardRideState cardRideState) {

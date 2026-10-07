@@ -7,6 +7,7 @@ import ew.engine.cards.effects.Effect;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/** Implemented by CardInstance, CommanderInstance, and ZoneInstance. */
 public interface LivingObject {
     LivingObject getSelf();
     boolean equals(Object other);
@@ -32,9 +33,9 @@ public interface LivingObject {
     int getQ();
     int getDeclaredNum();
     int getDeclaredName();
-    int getDeclaredAttribute();
-    int getDeclaredPile();
-    int getDeclaredDirection();
+    CardAttribute getDeclaredAttribute();
+    Pile getDeclaredPile();
+    Direction getDeclaredDirection();
     List<Integer> getDeclaredChoices();
     SideID getController();
     SideID getUser();
@@ -59,12 +60,12 @@ public interface LivingObject {
     boolean isDestroyed(); // for being destroyed on field
     boolean isExcavated();
     boolean isSearched();
-    boolean isToken();
+    boolean isOriginallyToken();
     boolean isDecisive();
     boolean isTokenInstance();
     boolean isDecisiveInstance();
     boolean isOccupying();
-    public List<Integer> getUsedByEffectID();
+    List<Integer> getUsedByEffectID();
 
     void setTypeInstance(CardType newType);
     void setName(String newName);
@@ -80,9 +81,9 @@ public interface LivingObject {
     void setQ(int q);
     void setDeclaredNum(int d);
     void setDeclaredName(int d);
-    void setDeclaredAttribute(int d);
-    void setDeclaredPile(int d);
-    void setDeclaredDirection(int d);
+    void setDeclaredAttribute(CardAttribute d);
+    void setDeclaredPile(Pile d);
+    void setDeclaredDirection(Direction d);
     void setDeclaredChoices(List<Integer> choices);
     void addEffect(EffectInstance effect);
     void removeEffect(int effectID);

@@ -20,22 +20,24 @@ public enum TargetType {
     // A Target that mentions Target is used when a TargetField or TargetOffField is explicitly stated before
     Target,
     ExceptUsersTargets,
+    OccupyingTargetsZone,
 
     // Declared types also are used when a Declaration is made beforehand.
     DeclaredName,
     DeclaredAttribute,
     DeclaredPile,
-    DeclaredDirection, // Keeps objects which are in the
+    InDeclaredDirectionFromSelf, // Keeps objects which are in the
 
     // Targets used when target isn't explicitly stated
     Self,
     NotSelf,
 
     Commanders,
-    OwningCommander,
-    ControllingCommander,
-    UsingCommander, // The Commander that pays the cost when the card isn't on the field (before being placed, activated in hand, etc.)
     OpponentCommander,
+
+    OwningCommander, // Cards the owner put in their deck / tokens they created
+    ControllingCommander, // Cards that are on the field
+    UsingCommander, // The Commander that pays the cost when the card isn't on the field (before being placed, activated in hand, etc.)
 
     Gamestate, // Used singularly, for something not owned by anything except the match (the current phase, for example)
 
@@ -43,6 +45,7 @@ public enum TargetType {
     // For effects other than the above, zone targets include the cards in the zones.
     FieldZones,
     OccupiedZones,
+    OccupyingThisZone, // Targets every card with the same onField position as this card
     UnoccupiedZones,
     ZonesOnYourSide,
     ZonesOnYourOpponentsSide,
@@ -63,6 +66,9 @@ public enum TargetType {
     ZonesYouControl,
     ZonesYouDontControl,
 
+    ZonesAdjacentToThisLane, // Excludes the lane "this" is in
+    ZonesAdjacentToThisFile, // Excludes the file "this" is in
+
     // Card targets
     Cards,
     CardsExceptThisCard,
@@ -79,18 +85,18 @@ public enum TargetType {
     DecisiveCards,
     TokenCards,
 
-    HumanCards,
-    MachineCards,
-    RockCards,
-    PlantCards,
-    WindCards,
-    WaterCards,
-    FlameCards,
-    BeastCards,
-    DivineCards,
-    GhoulCards,
-    EtherCards,
-    RitualCards,
+    HumanCards,	ExceptHumanCards,
+    MachineCards, ExceptMachineCards,
+    RockCards,	ExceptRockCards,
+    PlantCards,	ExceptPlantCards,
+    WindCards,	ExceptWindCards,
+    WaterCards,	ExceptWaterCards,
+    FlameCards,	ExceptFlameCards,
+    BeastCards,	ExceptBeastCards,
+    DivineCards, ExceptDivineCards,
+    GhoulCards,	ExceptGhoulCards,
+    EtherCards,	ExceptEtherCards,
+    RitualCards, ExceptRitualCards,
 
     FaceUpCards,
     FaceDownCards,
@@ -101,7 +107,7 @@ public enum TargetType {
     RevealedCards,
     UnrevealedCards,
     DestroyedCards, // refers to destroyed cards on the field, their isDestroyed state.
-    NonDestroyedCards, // This too
+    NotDestroyedCards, // refers to cards on the field that aren't destroyed
     RidingCards,
     RodeCards,
 
@@ -120,6 +126,20 @@ public enum TargetType {
     CardsNotDestroyed,
     CardsNotDiscarded,
     CardsNotDisplaced,
+
+    CardsThatCanMoveForwards,
+    CardsThatCanMoveBackwards,
+    CardsThatCanMoveLeft,
+    CardsThatCanMoveRight,
+    CardsThatCanMoveForwardsOrBackwards,
+    CardsThatCanMoveLeftOrRight,
+
+    CardsWithSpaceToBePlaced,
+    CardsWithSpaceToBePlacedAfterUse,
+
+    // Things that could potentially apply to cards as well as zones
+    Revealed,
+    NotRevealed,
 
     // Rideability checks
     RideableCards,
@@ -148,7 +168,7 @@ public enum TargetType {
 
     // PlacementCostCanBeMet excludes the card that would be placed from using itself.
     PlacementCostCanBeMetByUsersFieldCards,
-    PlacementCostCanBeMetByUsersCardsInHand,
+    PlacementCostCanBeMetByUsersCardsInHand, PlacementCostCanBeMetByUsersCardsInHandOrNormally,
     PlacementCostCanBeMetByUsersDestroyedCards,
     PlacementCostCanBeMetByUsersDiscardedCards,
     PlacementCostCanBeMetByUsersDisplacedCards,
@@ -157,4 +177,35 @@ public enum TargetType {
     PlacementCostCanBeMetByTargets,
     PlacementCostCanBeMetByAnyFieldCards,
     PlacementCostCanBeMetByOpponentsFieldCards,
+    PlacementCostCanBeMetByUsersZones,
+
+    // Continuous checks, all automatically placed on changes.
+    // These all have individual functions that take active continuous in Engine.
+    isTargetable,
+    isPlaceable,
+    isDamageable,
+    isRestorable,
+    isShroudable,
+    isRevealable,
+    isUnrevealable,
+    isSwappable,
+    isMoveable, // has immobile
+    isDestroyable,
+    isDiscardable,
+    isDisplaceable,
+    isUnshroudable,
+    canDeclare,
+    canChoose,
+    canGainCounters,
+    canLoseCounters,
+    canAddToHand,
+    lessThan7DreamCountersORcanGainMoreThan7DreamCounter,
+
+    // Commander
+    canGainMaterial,
+    canDraw; // Is true even with an empty deck. Draw effects instead deal damage.
+
+    public static boolean isPatternTarget(TargetType check) {
+        return check.ordinal() <= 48; // This is fine because nothing will ever go behind the 48 targetType.
+    }
 }

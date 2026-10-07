@@ -26,7 +26,7 @@ public class Log {
 
     public List<List<GameEvent>> getLog(int turn) {
         return log.stream()
-            .filter(e -> e.get(0).getTurn() != turn)
+            .filter(e -> e.get(0).getTurn() == turn)
             .toList();
     }
 }

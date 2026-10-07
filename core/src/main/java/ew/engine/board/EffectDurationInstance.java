@@ -15,7 +15,7 @@ public final class EffectDurationInstance extends EffectDuration implements Effe
     VariableGameNum strengthInstance;
 
     final LivingObject owner;
-    final EffectInstance changeFrom;
+    final EffectChangeInstance effectChangeFrom;
     LivingObject user;
     final int effectInstanceID;
     int timesUsed = 0;
@@ -32,7 +32,7 @@ public final class EffectDurationInstance extends EffectDuration implements Effe
     }
 
     public List<ConditionInstance> getInstanceConditions() { return instanceConditions; }
-    public EffectInstance getEffectFrom() { return changeFrom; }
+    public EffectInstance getEffectFrom() { return null; }
     public ConditionType getTicksOnInstance() { return ticksInstance; }
     public List<TargetType> getTargetInstance() { return targetRequirementsInstance; }
     public VariableGameNum getStrengthInstance() { return strengthInstance; }
@@ -41,6 +41,13 @@ public final class EffectDurationInstance extends EffectDuration implements Effe
     public int getEffectID() { return effectInstanceID; }
     public int getTimesUsedThisTurn() { return timesUsed; }
     public boolean isNegated() { return isNegated; }
+    public EffectChangeInstance getEffectChangeFrom() { return effectChangeFrom; }
+    public boolean isCost() {
+        return this.getEffectFrom().getInstanceCost().stream()
+            .map(EffectChangeInstance::getDurationInstance)
+            .toList()
+            .contains(this);
+    }
 
     public void setInstanceConditions(List<ConditionInstance> conditions) { this.instanceConditions = conditions; }
     public void tickTimesUsed() { ++timesUsed; }
@@ -50,25 +57,24 @@ public final class EffectDurationInstance extends EffectDuration implements Effe
     public void setTargetInstance(List<TargetType> newTargetReqs) { this.targetRequirementsInstance = newTargetReqs; }
     public void setStrengthInstance(VariableGameNum newStrength) { this.strengthInstance = newStrength; }
 
-    public EffectDurationInstance(EffectDuration duration, LivingObject owner, AtomicInteger nextEffectIDs, EffectInstance changeFrom) {
+    public EffectDurationInstance(EffectDuration duration, LivingObject owner, AtomicInteger nextEffectIDs, EffectChangeInstance changeFrom) {
         super(duration.getDurationCondition(), duration.getTicksOn(), duration.getStrength());
         this.instanceConditions = new ArrayList<ConditionInstance>();
         for (Condition condition : duration.getDurationCondition()) {
             instanceConditions.add(new ConditionInstance(condition, owner, nextEffectIDs, changeFrom));
         }
-        this.changeFrom = changeFrom;
         this.strengthInstance = duration.getStrength();
         this.ticksInstance = duration.getTicksOn();
         this.owner = owner;
         this.user = owner;
         this.effectInstanceID = nextEffectIDs.getAndIncrement();
+        this.effectChangeFrom = changeFrom;
     }
 
     public EffectDurationInstance(EffectDurationInstance copyInstance) {
         super(copyInstance.getDurationCondition(), copyInstance.getTicksOnInstance(), copyInstance.getStrengthInstance());
         this.targetRequirementsInstance = copyInstance.getTargetInstance();
         this.strengthInstance = copyInstance.getStrengthInstance();
-        this.changeFrom = copyInstance.getEffectFrom();
         this.ticksInstance = copyInstance.getTicksOnInstance();
         this.owner = copyInstance.getOwner();
         this.user = copyInstance.getUser();
@@ -76,5 +82,6 @@ public final class EffectDurationInstance extends EffectDuration implements Effe
         this.effectInstanceID = copyInstance.getEffectID();
         this.timesUsed = copyInstance.getTimesUsedThisTurn();
         this.isNegated = copyInstance.isNegated();
+        this.effectChangeFrom = copyInstance.getEffectChangeFrom();
     }
 }

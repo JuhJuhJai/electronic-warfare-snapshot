@@ -8,5 +8,14 @@ public enum Direction {
     FORWARD,
     BACKWARD,
     LEFT,
-    RIGHT
+    RIGHT;
+
+    /** Use fromDeclared to resolve this integer back into a direction. */
+    public int toDeclared() {
+        return this.ordinal();
+    }
+
+    public static Direction fromDeclared(int declared) {
+        return values()[declared];
+    }
 }

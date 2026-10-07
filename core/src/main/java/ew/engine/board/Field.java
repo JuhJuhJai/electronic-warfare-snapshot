@@ -62,6 +62,15 @@ public final class Field {
     public ZoneInstance getZoneAt(Position p) { return zoneInstances[p.getLane()][p.getFile()]; }
     /** Returns the zone from a given lane and file */
     public ZoneInstance getZoneAt(int lane, int file) { return zoneInstances[lane][file]; }
+    /** Returns the zone that matches with the given ID. */
+    public ZoneInstance getZone(int instanceID) {
+        for (ZoneInstance[] file : zoneInstances) {
+            for (ZoneInstance zone : file) {
+                if (zone.getInstanceID() == instanceID) return zone;
+            }
+        }
+        throw new IllegalArgumentException("Zone id (" + instanceID + ") isn't on the field.");
+    }
 
     /** Returns a List of zones in a lane */
     public List<ZoneInstance> getLane(int lane) {

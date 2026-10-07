@@ -59,35 +59,19 @@ public class Effect {
         return PLACE_COST(effectText, List.of(), cost, List.of());
     }
 
-    /** Abbreviation for PLACE_COST that generates effect text and the proper placement condition based on the card's type. */
+    /** Abbreviation for PLACE_COST that generates effect text. */
     public static Effect BASIC_MATERIAL(CardType type, int placeMaterialCost) {
         if (!(type == CardType.ATTACK || type == CardType.PRODUCTION)) throw new IllegalArgumentException("Invalid card type (" + type + ") for Basic Material Cost.");
         return PLACE_COST(placeMaterialCost + " Material",
-            Arrays.asList(
-                Condition.of(ConditionType.MinMaterial, new ArrayList<TargetType>(List.of(TargetType.UsingCommander)), placeMaterialCost),
-                Condition.of(type == CardType.ATTACK ?
-                        ConditionType.AvailableAttackPlacementSpace :
-                        ConditionType.AvailableProductionPlacementSpace,
-                    List.of(TargetType.UsingCommander), 1)
-            ),
             List.of(
                 EffectChange.of(EffectChangeType.PayMaterial, new ArrayList<TargetType>(List.of(TargetType.UsingCommander)), placeMaterialCost)
             )
         );
     }
 
-    /** Abbreviation for BASIC_MATERIAL that takes a token and only requires available space. */
-    public static Effect TOKEN_MATERIAL(CardType tokenType) {
-        if (!(tokenType == CardType.TOKENATTACK || tokenType == CardType.TOKENPRODUCTION)) throw new IllegalArgumentException("Invalid card type (" + tokenType + ") for Token Material Cost.");
-        return PLACE_COST("",
-            List.of(
-                Condition.of(tokenType == CardType.TOKENATTACK ?
-                        ConditionType.AvailableAttackPlacementSpace :
-                        ConditionType.AvailableProductionPlacementSpace,
-                    List.of(TargetType.UsingCommander), 1)
-            ),
-            List.of()
-        );
+    /** A token has no cost, usually. The cost is paid in the effect that makes the token, instead. */
+    public static Effect TOKEN_COST() {
+        return PLACE_COST("", List.of(), List.of());
     }
 
     /**
@@ -101,12 +85,10 @@ public class Effect {
         return PLACE_COST("By an effect that uses cards, displace cards until the end of the next Aftermath Phase " +
             "whose material cost totals " + materialCostTotal + " material, then pay " + paymentPerCard + " for each card used.",
             new ArrayList<Condition>(List.of(
-                Condition.of(ConditionType.MaterialAvailable, List.of(TargetType.CurrentlyUsable, TargetType.CardsNotDisplaced), materialCostTotal),
-                Condition.of(ConditionType.MinMaterial, TargetType.UsingCommander, VariableGameNum.Variable(VariableNumType.MinCardThisCardUses, paymentPerCard)),
-                Condition.of(ConditionType.AvailableAttackPlacementSpace, TargetType.UsingCommander, 1)
             )),
             new ArrayList<EffectChange>(List.of(
-                EffectChange.of(EffectChangeType.DisplaceMaterial, List.of(TargetType.CurrentlyUsable, TargetType.CardsNotDisplaced), materialCostTotal),
+                EffectChange.duration(EffectChangeType.DisplaceMaterial, List.of(TargetType.CurrentlyUsable, TargetType.CardsNotDisplaced),
+                    materialCostTotal, new EffectDuration(ConditionType.AftermathPhaseEnds, 2)),
                 EffectChange.of(EffectChangeType.PayMaterial, TargetType.UsingCommander, VariableGameNum.Variable(VariableNumType.PerCardThisCardUses, paymentPerCard))
             ))
         );
@@ -153,7 +135,7 @@ public class Effect {
     }
 
     public static Effect FIELD_TRIGGER(String effectText, boolean usableWhileShrouded, List<Condition> conditions, List<EffectChange> cost, List<EffectChange> effect) {
-        return TRIGGER(effectText, usableWhileShrouded, Stream.of(List.of(Condition.inPosition(TargetType.CardsOnTheField)), conditions).flatMap(List::stream).toList(), cost, effect);
+        return TRIGGER(effectText, usableWhileShrouded, Stream.concat(Stream.of(Condition.inPosition(TargetType.CardsOnTheField)), conditions.stream()).toList(), cost, effect);
     }
 
     public static Effect FIELD_TRIGGER(String effectText, List<Condition> conditions, List<EffectChange> cost, List<EffectChange> effect) {
@@ -178,7 +160,7 @@ public class Effect {
     }
 
     public static Effect FIELD_ACTIVATABLE(String effectText, boolean usableWhileShrouded, List<Condition> conditions, List<EffectChange> cost, List<EffectChange> effect) {
-        return ACTIVATABLE(effectText, usableWhileShrouded, Stream.of(List.of(Condition.inPosition(TargetType.CardsOnTheField)), conditions).flatMap(List::stream).toList(), cost, effect);
+        return ACTIVATABLE(effectText, usableWhileShrouded, Stream.concat(Stream.of(Condition.inPosition(TargetType.CardsOnTheField)), conditions.stream()).toList(), cost, effect);
     }
 
     public static Effect FIELD_ACTIVATABLE(String effectText, List<Condition> conditions, List<EffectChange> cost, List<EffectChange> effect) {
@@ -202,7 +184,7 @@ public class Effect {
         return Effect.ACTION(effectText, false, conditions, cost, effect);
     }
 
-    // Actions don't need conditions as the resolver already checks for the base condition of it being the combat phase and their lane being selected.
+    // Actions don't need conditions as the resolver already checks for the base condition of it being the combat phase and their lane being selected, while the card is on the field.
     public static Effect ACTION(String effectText, List<EffectChange> cost, List<EffectChange> effect) {
         return Effect.ACTION(effectText, List.of(), cost, effect);
     }

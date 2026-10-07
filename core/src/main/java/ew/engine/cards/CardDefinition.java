@@ -4,6 +4,7 @@ import ew.engine.cards.effects.*;
 import ew.engine.resolver.VariableGameNum;
 import ew.engine.resolver.VariableNumType;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -37,15 +38,9 @@ public class CardDefinition {
                 // This placeholder card doesn't use any abbreviation.
                 placeCost = Effect.PLACE_COST(
                     "1 Material.",
-                    false,
-                    new ArrayList<Condition>(Arrays.asList(
-                        Condition.conditional(List.of(), ConditionType.MinMaterial, TargetType.UsingCommander, VariableGameNum.Num(1)),
-                        Condition.conditional(List.of(), ConditionType.AvailableAttackPlacementSpace, TargetType.UsingCommander, VariableGameNum.Num(1))
-                    )),
                     new ArrayList<EffectChange>(List.of(
                         EffectChange.conditional(List.of(), EffectChangeType.PayMaterial, TargetType.UsingCommander, VariableGameNum.Num(1))
-                    )),
-                    new ArrayList<EffectChange>()
+                    ))
                 );
 
                 effects = new ArrayList<Effect>(List.of(
@@ -196,15 +191,11 @@ public class CardDefinition {
                     ),
                     Effect.ACTION(
                         "Collect - Remove x Energy Counters from cards you control and target a card → the target restores x (max 2).",
-                        new ArrayList<Condition>(List.of(
-                            Condition.inPosition(TargetType.CardsOnTheField),
-                            Condition.of(ConditionType.MinEnergyCounters, TargetType.CardsYouControl, 1)
-                        )),
                         new ArrayList<EffectChange>(List.of(
                             EffectChange.of(EffectChangeType.RemoveEnergyCounters, TargetType.CardsYouControl,
                                 VariableGameNum.DefineX(1, 2)
                             ),
-                            Target.of(List.of(TargetType.FieldZones, TargetType.Cards))
+                            Target.of(List.of(TargetType.CardsOnTheField))
                         )),
                         new ArrayList<EffectChange>(List.of(
                             EffectChange.of(EffectChangeType.Restore, TargetType.Target, VariableGameNum.PreviousX())
@@ -232,13 +223,10 @@ public class CardDefinition {
                             EffectChange.of(EffectChangeType.MoveAnyDirection, TargetType.Self, 1)
                         ))
                     ),
-                    Effect.TRIGGER(
+                    Effect.FIELD_TRIGGER(
                         "If the combat phase begins, remove 1 Tide Counter from this card → move this card forwards or backwards 1 zone.",
                         new ArrayList<Condition>(List.of(
-                            Condition.inPosition(TargetType.CardsOnTheField),
-                            Condition.Timing(ConditionType.CombatPhaseBegins),
-                            Condition.of(ConditionType.MinTideCounters, TargetType.Self, 1),
-                            Condition.of(ConditionType.MinThings, List.of(TargetType.ZonesAdjacentToThis, TargetType.ZonesInThisLane, TargetType.UnoccupiedZones), 1)
+                            Condition.Timing(ConditionType.CombatPhaseBegins)
                         )),
                         new ArrayList<EffectChange>(List.of(
                             EffectChange.of(EffectChangeType.RemoveTideCounters, TargetType.Self, 1)
@@ -290,15 +278,14 @@ public class CardDefinition {
                             "place a shrouded Conspiracy Token, then you can secretly swap the positions of " +
                             "two shrouded cards you own in attack zones.",
                         new ArrayList<Condition>(List.of(
-                            Condition.of(ConditionType.MinThings, List.of(TargetType.FieldZones, TargetType.ShroudedCards, TargetType.CardsYouControl), 1),
-                            Condition.of(ConditionType.MinMaterial, TargetType.UsingCommander, 3)
+                            Condition.of(ConditionType.MinThings, List.of(TargetType.FieldZones, TargetType.ShroudedCards, TargetType.CardsYouControl), 1)
                         )),
                         new ArrayList<EffectChange>(List.of(
                             EffectChange.of(EffectChangeType.PayMaterial, TargetType.UsingCommander, 3)
                         )),
                         new ArrayList<EffectChange>(List.of(
                             EffectChange.of(EffectChangeType.PlaceConspiracyToken, List.of(TargetType.ZonesOnly, TargetType.AttackZones), 1),
-                            EffectChange.of(EffectChangeType.SecretlySwap2Choices, List.of(TargetType.CardsYouControl, TargetType.ShroudedCards), 1)
+                            EffectChange.conditional(Condition.OPTIONAL(), EffectChangeType.SecretlySwap2Choices, List.of(TargetType.CardsYouControl, TargetType.ShroudedCards), 1)
                         ))
                     )
                 ));
@@ -314,7 +301,7 @@ public class CardDefinition {
                 attribute = CardAttribute.Human;
                 health = 1;
 
-                placeCost = Effect.TOKEN_MATERIAL(CardType.TOKENATTACK);
+                placeCost = Effect.TOKEN_COST(); // which is nothing
 
                 effects = new ArrayList<Effect>(List.of(
                     Effect.UNSHROUD(
@@ -339,9 +326,10 @@ public class CardDefinition {
                 effects = new ArrayList<Effect>(List.of(
                     Effect.FIELD_ACTIVATABLE(
                         "Once per turn → " +
-                            "randomly choose 1: (1) Gain 1 Material. (2) Move a machine card you control backwards 1 zone. " +
-                            "(3) Move a machine card you control forwards 1 zone. (4) Draw 1 card from your opponent's deck, " +
-                            "then destroy this card. (5) Return this card to the hand.",
+                            "randomly choose 1: (1) Move a machine card you control backwards 1 zone. (2) Move a machine card" +
+                            "you control forwards 1 zone. (3) Both players draw 1 card. (4) Draw 1 card from your opponent's deck." +
+                            "(5) Return this card to the hand, and if you do, place a machine card from your hand, except this card" +
+                            "paying its place cost minus 2.",
                         new ArrayList<Condition>(List.of(
                             Condition.UsesPerTurn(1)
                         )),
@@ -350,12 +338,13 @@ public class CardDefinition {
                         )),
                         new ArrayList<EffectChange>(List.of(
                             EffectChange.chooseRandom(5),
-                            EffectChange.conditional(Condition.OPTION1(), EffectChangeType.GainMaterial, TargetType.UsingCommander, 1),
-                            EffectChange.conditional(Condition.OPTION2(), EffectChangeType.MoveBackwards, List.of(TargetType.CardsYouControl, TargetType.MachineCards), 1),
-                            EffectChange.conditional(Condition.OPTION3(), EffectChangeType.MoveBackwards, List.of(TargetType.CardsYouControl, TargetType.MachineCards), 1),
-                            EffectChange.conditional(Condition.OPTION4(), EffectChangeType.DrawFromOpponentsDeck, TargetType.Cards, 1), // The target type for a draw specifies which types of cards may be drawn. This usually doesn't matter.
-                            EffectChange.conditional(Condition.OPTION4(), EffectChangeType.Destroy, TargetType.Self, 1),
-                            EffectChange.conditional(Condition.OPTION5(), EffectChangeType.ReturnToHand, TargetType.Self, 1)
+                            EffectChange.conditional(Condition.CHOICE1(), EffectChangeType.MoveBackwards, List.of(TargetType.CardsYouControl, TargetType.MachineCards), 1),
+                            EffectChange.conditional(Condition.CHOICE2(), EffectChangeType.MoveForwards, List.of(TargetType.CardsYouControl, TargetType.MachineCards), 1),
+                            EffectChange.conditional(Condition.CHOICE3(), EffectChangeType.Draw, TargetType.Commanders, 1),
+                            EffectChange.conditional(Condition.CHOICE4(), EffectChangeType.DrawFromOpponentsDeck, TargetType.ControllingCommander, 1),
+                            EffectChange.conditional(Condition.CHOICE5(), EffectChangeType.ReturnToHand, TargetType.Self, 1),
+                            EffectChange.conditional(Condition.AndIfYouDo(), EffectChangeType.PlaceMinusStrengthMaterialMin0,
+                                List.of(TargetType.CardsInHand, TargetType.MachineCards, TargetType.CardsExceptThisCard), 2)
                         ))
                     )
                 ));
@@ -376,13 +365,10 @@ public class CardDefinition {
                     "By an effect that uses cards, " +
                         "displace cards until the end of the next Aftermath Phase whose material cost totals 6 Material, " +
                         "then pay 2 material for each card used.",
-                    new ArrayList<Condition>(List.of(
-                        Condition.of(ConditionType.MaterialAvailable, List.of(TargetType.CurrentlyUsable, TargetType.CardsNotDisplaced), 6),
-                        Condition.of(ConditionType.MinMaterial, TargetType.UsingCommander, VariableGameNum.Variable(VariableNumType.MinCardThisCardUses, 2)),
-                        Condition.of(ConditionType.AvailableAttackPlacementSpace, TargetType.UsingCommander, 1)
-                    )),
+                    new ArrayList<Condition>(),
                     new ArrayList<EffectChange>(List.of(
-                        EffectChange.of(EffectChangeType.DisplaceMaterial, List.of(TargetType.CurrentlyUsable, TargetType.CardsNotDisplaced), 6),
+                        EffectChange.duration(EffectChangeType.DisplaceMaterial, List.of(TargetType.CurrentlyUsable, TargetType.CardsNotDisplaced),
+                            6, new EffectDuration(ConditionType.AftermathPhaseEnds, 2)),
                         EffectChange.of(EffectChangeType.PayMaterial, TargetType.UsingCommander, VariableGameNum.Variable(VariableNumType.PerCardThisCardUses, 2))
                     ))
                 );
@@ -418,14 +404,13 @@ public class CardDefinition {
                         "While this card is in your hand, reveal this card → " +
                             "place a ritual card from your hand using card(s) from your hand.",
                         new ArrayList<Condition>(List.of(
-                            Condition.inPosition(List.of(TargetType.CardsInHand, TargetType.UnrevealedCards)),
-                            Condition.of(ConditionType.MinThings, List.of(TargetType.CardsInHand, TargetType.CardsYouUse, TargetType.RitualCards, TargetType.PlacementCostCanBeMetByUsersCardsInHand), 1)
+                            Condition.inPosition(List.of(TargetType.CardsInHand))
                         )),
                         new ArrayList<EffectChange>(List.of(
                             EffectChange.duration(EffectChangeType.Reveal, TargetType.Self, 1, new EffectDuration(ConditionType.AftermathPhaseEnds, 1))
                         )),
                         new ArrayList<EffectChange>(List.of(
-                            EffectChange.of(EffectChangeType.PlaceUsingHand, List.of(TargetType.CardsInHand, TargetType.CardsYouUse, TargetType.RitualCards, TargetType.PlacementCostCanBeMetByUsersCardsInHand), 1)
+                            EffectChange.of(EffectChangeType.PlaceUsingHand, List.of(TargetType.CardsInHand, TargetType.CardsYouUse, TargetType.RitualCards), 1)
                         ))
                     ),
                     Effect.ACTION(
@@ -461,13 +446,11 @@ public class CardDefinition {
 
             default -> throw new IllegalArgumentException("Unexpected Card ID: " + cardID);
         }
+        // cardArt = name + ".jpg";
     }
 
     /** Returns a token's cardID based on its referenced EffectChangeType */
     public static int getTokenID(EffectChangeType tokenPlacement) {
-        if (!(tokenPlacement.ordinal() >= 28 && tokenPlacement.ordinal() <= 45))
-            throw new IllegalArgumentException("Invalid EffectChangeType (" + tokenPlacement + ") for getTokenID.");
-
         return switch(tokenPlacement) {
             case PlaceConspiracyToken -> 7;
             default -> throw new IllegalArgumentException("Token type (" + tokenPlacement.toString().substring(5) + ") not yet implemented.");

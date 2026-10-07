@@ -11,7 +11,7 @@ public class Server {
     final int MAX_WAITING_TIME = 20; // Seconds
     final Map<Long, Commander> commanderList = new HashMap<>();
     final Map<Long, Room> roomList = new HashMap<>();
-    final Queue<Commander> waitingRoom = new ConcurrentLinkedQueue<>();
+    final Queue<Commander> waitingRoom = new ConcurrentLinkedQueue<>(); // Implement elo later
     final SecureRandom random = new SecureRandom();
     long nextCommanderID = 1;
     long nextMatchID = 1;
