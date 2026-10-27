@@ -13,7 +13,6 @@ import java.util.concurrent.TimeUnit;
 /** Class that saves future actions the commander will make. It is Match's only method of communication to commanders. */
 public class ControllerInstance {
     private final SynchronousQueue<List<Integer>> responses = new SynchronousQueue<>();
-
     volatile List<Integer> nextNumber;
     volatile List<GameChoice> nextChoice;
     volatile List<List<GameChoiceChange>> nextChangeChoice; // Some individual changes require multiple choices, which aren't related to previous choices.
