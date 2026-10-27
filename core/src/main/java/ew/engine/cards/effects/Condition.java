@@ -74,6 +74,36 @@ public class Condition {
         return new Condition(List.of(), timingPoint, List.of(TargetType.Gamestate), VariableGameNum.ONE());
     }
 
+    public static Condition CHOICE1() {
+        return of(ConditionType.Choice, TargetType.Self, 1);
+    }
+
+    public static Condition CHOICE2() {
+        return of(ConditionType.Choice, TargetType.Self, 2);
+    }
+
+    public static Condition CHOICE3() {
+        return of(ConditionType.Choice, TargetType.Self, 3);
+    }
+
+    public static Condition CHOICE4() {
+        return of(ConditionType.Choice, TargetType.Self, 4);
+    }
+
+    public static Condition CHOICE5() {
+        return of(ConditionType.Choice, TargetType.Self, 5);
+    }
+
+    public static Condition CHOICE6() {
+        return of(ConditionType.Choice, TargetType.Self, 6);
+    }
+
+    public static Condition TargetDestroyed() {
+        return of(ConditionType.MinThings, List.of(TargetType.Target, TargetType.DestroyedCards), 1); }
+
+    public static Condition CardInFrontOfThis() {
+        return of(ConditionType.MinThings, List.of(TargetType.ZonesInFrontOfThis, TargetType.Cards), 1); }
+
     public static Condition of(ConditionType type, List<TargetType> targetType, VariableGameNum check) {
         return new Condition(List.of(), type, targetType, check);
     }
@@ -88,6 +118,11 @@ public class Condition {
 
     public static Condition of(ConditionType type, TargetType targetType, int check) {
         return of(type, List.of(targetType), VariableGameNum.Num(check));
+    }
+
+    /// Sets check to 1.
+    public static Condition of(ConditionType type, TargetType targetType) {
+        return of(type, List.of(targetType), VariableGameNum.ONE());
     }
 
     public static Condition conditional(List<Condition> checkConditions, ConditionType type, List<TargetType> targetType, VariableGameNum check) {
@@ -122,27 +157,11 @@ public class Condition {
         return conditional(checkCondition, type, List.of(targetType), VariableGameNum.Num(check));
     }
 
-    public static Condition CHOICE1() {
-        return of(ConditionType.Choice, TargetType.Self, 1);
+    public static Condition TRUE() {
+        return of(ConditionType.TRUE, TargetType.Self, 0);
     }
 
-    public static Condition CHOICE2() {
-        return of(ConditionType.Choice, TargetType.Self, 2);
-    }
-
-    public static Condition CHOICE3() {
-        return of(ConditionType.Choice, TargetType.Self, 3);
-    }
-
-    public static Condition CHOICE4() {
-        return of(ConditionType.Choice, TargetType.Self, 4);
-    }
-
-    public static Condition CHOICE5() {
-        return of(ConditionType.Choice, TargetType.Self, 5);
-    }
-
-    public static Condition CHOICE6() {
-        return of(ConditionType.Choice, TargetType.Self, 6);
+    public static Condition FALSE() {
+        return of(ConditionType.FALSE, TargetType.Self, 0);
     }
 }

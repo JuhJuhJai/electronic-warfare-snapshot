@@ -1,7 +1,7 @@
 package ew.server;
 
-import ew.engine.resolver.GameChoice;
-import ew.engine.resolver.GameChoiceChange;
+import ew.engine.resolver.log.GameChoice;
+import ew.engine.resolver.log.GameChoiceChange;
 import ew.playerData.Commander;
 
 import java.util.ArrayList;

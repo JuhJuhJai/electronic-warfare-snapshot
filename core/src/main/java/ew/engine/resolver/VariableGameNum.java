@@ -1,19 +1,37 @@
 package ew.engine.resolver;
 
 import ew.engine.board.*;
+import ew.engine.board.cardInstance.CardInstance;
+import ew.engine.board.effectInstance.ContinuousInstance;
+import ew.engine.board.effectInstance.EffectStipulationObject;
+import ew.engine.board.effectInstance.ImmutableEffectChangeInstance;
+import ew.engine.board.effectInstance.ImmutableEffectStipulationObject;
+import ew.engine.board.state.GameState;
+import ew.engine.board.zoneInstance.ZoneInstance;
 import ew.engine.cards.effects.EffectChangeType;
 import ew.server.ControllerInstance;
+import ew.engine.resolver.log.GameEvent;
 
 import java.util.ArrayList;import java.util.List;
 
 public class VariableGameNum {
     final int baseValue;
-    VariableGameNum min;
-    VariableGameNum max;
+    final VariableGameNum min;
+    final VariableGameNum max;
     final VariableNumType type;
     /** May multiply or add to the final result, depending on the VariableGameNumType. */
-    VariableGameNum modifier;
+    final VariableGameNum modifier;
     final boolean isSet;
+
+    public String toString() {
+        if (type != VariableNumType.Num) {
+            if (max.baseValue != 99) {
+                return type + " (" + min + " to " + max + ") " + " for " + baseValue + " modified: (" + modifier + ")";
+            }
+            return type + " for " + baseValue + " modified: (" + modifier + ")";
+        }
+        return "" + baseValue;
+    }
 
     private VariableGameNum(int baseValue, VariableNumType type, VariableGameNum modifier, VariableGameNum min, VariableGameNum max, boolean isSet) {
         this.baseValue = baseValue;
@@ -30,6 +48,11 @@ public class VariableGameNum {
 
     public static VariableGameNum CopyDifferentType(VariableGameNum copyNum, VariableNumType newType) {
         return new VariableGameNum(copyNum.baseValue, newType, copyNum.modifier, copyNum.min, copyNum.max, copyNum.isSet);
+    }
+
+    /// Returns a new VariableGameNum with the base strength changed to the given strength.
+    public static VariableGameNum CopyDifferentBase(VariableGameNum copyNum, int newBaseStrength) {
+        return new VariableGameNum(newBaseStrength, copyNum.type, copyNum.modifier, copyNum.min, copyNum.max, copyNum.isSet);
     }
 
     /** Returns the copyNum's min if it has one, VariableGameNum.ONE otherwise. */
@@ -75,6 +98,10 @@ public class VariableGameNum {
         return VariableGameNum.Variable(0, type, modifier, VariableGameNum.ZERO(), VariableGameNum.Num(99));
     }
 
+    /** Sets the base value to 0, the modifier to 1, the minimum to 0 and the maximum to 99. */
+    public static VariableGameNum Variable(VariableNumType type) {
+        return VariableGameNum.Variable(0, type, 1, VariableGameNum.ZERO(), VariableGameNum.Num(99));
+    }
 
     /** When X has been defined before in the same effect, use this instead of defining X again. */
     public static VariableGameNum PreviousX() {
@@ -105,9 +132,9 @@ public class VariableGameNum {
     public static VariableGameNum DefineX(VariableGameNum min, VariableGameNum max) {
         return new VariableGameNum(0, VariableNumType.XNum, null, min, max, true);
     }
-
-    public static VariableGameNum DefineX(int min, int max) {
-        return VariableGameNum.DefineX(VariableGameNum.Num(min), VariableGameNum.Num(max));
+    /// Max cannot just be a number, it usually has another bound. Unless it doesn't. Sets min to 1.
+    public static VariableGameNum DefineX(VariableGameNum max) {
+        return VariableGameNum.DefineX(VariableGameNum.ONE(), max);
     }
 
     public static VariableGameNum DefineXEven(VariableGameNum min, VariableGameNum max) {
@@ -148,18 +175,20 @@ public class VariableGameNum {
 
     public VariableGameNum getModifier() { return modifier; }
 
+    public int getBaseValue() { return baseValue; }
+
     public int getValue(GameState state,
                         ControllerInstance chooser,
-                        EffectStipulationObject effectUsing,
-                        List<EffectChangeInstance> activeContinuous) {
+                        ImmutableEffectStipulationObject effectUsing,
+                        List<ContinuousInstance> activeContinuous) {
         return getValue(state, chooser, effectUsing, (List<LivingObject>) null, activeContinuous);
     }
 
     public int getValue(GameState state,
                         ControllerInstance chooser,
-                        EffectStipulationObject effectUsing,
+                        ImmutableEffectStipulationObject effectUsing,
                         LivingObject target,
-                        List<EffectChangeInstance> activeContinuous) {
+                        List<ContinuousInstance> activeContinuous) {
         return getValue(state, chooser, effectUsing, List.of(target), activeContinuous);
     }
 
@@ -169,9 +198,9 @@ public class VariableGameNum {
      */
     public int getValue(GameState state,
                         ControllerInstance chooser,
-                        EffectStipulationObject effectUsing,
+                        ImmutableEffectStipulationObject effectUsing,
                         List<LivingObject> target, // May be null
-                        List<EffectChangeInstance> activeContinuous) {
+                        List<ContinuousInstance> activeContinuous) {
         final LivingObject user = effectUsing.getUser();
 
         switch (this.type) {

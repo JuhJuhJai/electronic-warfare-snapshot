@@ -26,6 +26,11 @@ java.targetCompatibility = 17
 if (JavaVersion.current().isJava9Compatible()) {
         compileJava.options.release.set(17)
 }
+java {
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(17)
+  }
+}
 
 dependencies {
   implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"

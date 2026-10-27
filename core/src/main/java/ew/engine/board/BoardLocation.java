@@ -1,7 +1,7 @@
 package ew.engine.board;
 
 public enum BoardLocation {
-    /** This position is used only for zones that are not usable in the game. */
+    /// This position is used only for a place that is not usable in the game.
     BOARD(false),
 
     FIELD(true),
@@ -35,8 +35,11 @@ public enum BoardLocation {
     public static BoardLocation fromDeclared(int declared) {
         return values()[declared];
     }
+    public boolean isOne() { return this.ordinal() >= 2 && this.ordinal() <= 8; }
+    public boolean isTwo() { return this.ordinal() >= 9 && this.ordinal() <= 15; }
 
-    /** This position is used only for zones that are not usable in the game. */
+
+    /// This position is used only for a place that is not usable in the game.
     public static boolean inBoard(BoardLocation location) {
         return location == BOARD;
     }

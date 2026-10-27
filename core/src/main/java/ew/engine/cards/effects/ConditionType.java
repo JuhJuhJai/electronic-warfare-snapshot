@@ -74,11 +74,14 @@ public enum ConditionType {
     CountersAvailable,
     HealthAvailable,
 
-    // Only for EffectDuration. Always returns false.
-    NONE,
+    /// Only for EffectDuration. Always returns false.
+    FALSE,
+    /// Only for EffectDuration. Always returns true.
+    TRUE,
 
-    Choice, // The strength determines which value of choice is needed.
-    /** Only use optional for effectChange Conditions. */
+    /// The strength determines which value of choice is needed.
+    Choice,
+    /// Only use optional for effectChange Conditions.
     Optional;
 
     /** Returns true if the condition is used for cards that must use cards to place. */

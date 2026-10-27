@@ -1,5 +1,7 @@
 package ew.engine.board;
 
+import ew.engine.board.commanderInstance.Pile;
+import ew.engine.board.effectInstance.*;
 import ew.engine.cards.CardAttribute;
 import ew.engine.cards.CardType;
 import ew.engine.cards.effects.Effect;
@@ -18,9 +20,13 @@ public interface LivingObject {
     CardType getCardTypeInstance();
     String getOriginalName();
     String getNameInstance();
-    int getHealthInstance();
+    int getHealthMax();
+    /// Health max, health set to this when a card gets onto the field
+    int getHealthMaxInstance();
+    /// Health on the field
     int getHealth();
     SideID getOwner();
+    SideID getOwnerInstance();
     CardAttribute getOriginalAttribute();
     CardAttribute getInstanceAttribute();
     List<CounterType> getCounters();
@@ -39,8 +45,9 @@ public interface LivingObject {
     List<Integer> getDeclaredChoices();
     SideID getController();
     SideID getUser();
-    /** The cardID in CardDefinition */
+    /// The cardID in CardDefinition
     int getOriginalID();
+    /// The unique, immutable ID when a LivingObject is created
     int getInstanceID();
     List<TargetInstance> getTarget();
     Position getPosition();
@@ -55,8 +62,6 @@ public interface LivingObject {
     boolean isNegated();
     Position getUndisplacementLocation();
     EffectDurationInstance getUndisplacementTime();
-    boolean isRode();
-    boolean isRider();
     boolean isDestroyed(); // for being destroyed on field
     boolean isExcavated();
     boolean isSearched();
@@ -69,7 +74,9 @@ public interface LivingObject {
 
     void setTypeInstance(CardType newType);
     void setName(String newName);
-    void setHealthInstance(int healthInstance);
+    void setOwnerInstance(SideID newOwner);
+    void setHealthMaxInstance(int healthMaxInstance);
+    void setHealth(int healthInstance);
     void setAttributeInstance(CardAttribute attribute);
     void addCounter(CounterType counter, int amount);
     void removeCounter(CounterType counter, int amount);
@@ -100,7 +107,6 @@ public interface LivingObject {
     void setZoneOccupation(boolean occupies);
     void setExcavated(boolean excavated);
     void setSearched(boolean searched);
-    void setRideState(boolean riding, boolean ridden);
     void setDestroyedState(boolean destroyed);
     void addTarget(TargetInstance target);
     void addTarget(List<TargetInstance> target);

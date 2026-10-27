@@ -17,6 +17,17 @@ public final class Target extends EffectChange {
         super (targetCondition, targetType, stipulations, numOfTargets, targetDuration);
     }
 
+    /// Only targets zones.
+    public static List<TargetType> YourBackline() { return List.of(TargetType.OnlyAttackZonesOnYourSide, TargetType.BacklineZones); }
+    /// Only targets zones.
+    public static List<TargetType> YourFrontline() { return List.of(TargetType.OnlyAttackZonesOnYourSide, TargetType.FrontlineZones); }
+    /// Only targets zones.
+    public static List<TargetType> YourFarProduction() { return List.of(TargetType.OnlyProductionZonesOnYourSide, TargetType.FarProductionZones); }
+    /// Only targets zones.
+    public static List<TargetType> YourCloseProduction() { return List.of(TargetType.OnlyProductionZonesOnYourSide, TargetType.CloseProductionZones); }
+    public static List<TargetType> thisRodeCard() { return List.of(TargetType.Self, TargetType.RodeCards); }
+    public static List<TargetType> thisRidingCard() { return List.of(TargetType.Self, TargetType.RidingCards); }
+
     /** TargetType must be EffectChangeType that mentions Target. Makes the target a UniqueTarget. */
     public static Target of(EffectChangeType targetType, List<TargetType> stipulations, VariableGameNum numOfTargets) {
         switch (targetType) {

@@ -4,12 +4,10 @@ A [libGDX](https://libgdx.com/) project generated with [gdx-liftoff](https://git
 
 This project was generated with a template including simple application launchers and a main class extending `Game` that sets the first screen.
 
-This snapshot contains information that was updated (August 30th, 2026). Currently, the game cannot run. No GUI has been defined yet, so this stands purely as an example of code I've written thus far, and not as a project. I would recommend looking at [Engine](https://github.com/JuhJuhJai/electronic-warfare-snapshot/blob/main/core/src/main/java/ew/engine/resolver/Engine.java) for that view. 
-
-My IDE is IntelliJ IDEA. 
+This snapshot contains information that was updated (October 26th, 2026). Currently, the game cannot run. No GUI has been defined yet, so this stands purely as an example of code I've written thus far, and not as a project. I would recommend looking at [Engine](https://github.com/JuhJuhJai/electronic-warfare-snapshot/blob/main/core/src/main/java/ew/engine/resolver/Engine.java) for that view. 
 
 ## Documents
-- [Reference Sheet](https://docs.google.com/document/d/19DS2LbG061Gx649yVb4Ibzd81kmOYZEYzPr1OzUAi7c/edit?tab=t.0), for use during play. 
+- [Reference Sheet](https://docs.google.com/document/d/19DS2LbG061Gx649yVb4Ibzd81kmOYZEYzPr1OzUAi7c/edit?tab=t.0), for additional information during play.
 
 ## Platforms
 

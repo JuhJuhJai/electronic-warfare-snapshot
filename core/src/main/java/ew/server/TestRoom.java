@@ -1,6 +1,10 @@
 package ew.server;
 
-import ew.engine.board.GameStateView;
+import ew.engine.board.state.GameResult;
+import ew.engine.resolver.log.Log;
+import ew.engine.resolver.log.GameChoice;
+import ew.engine.resolver.log.GameChoiceChange;
+import ew.engine.resolver.view.FullGameStateView;
 import ew.engine.board.SideID;
 import ew.engine.resolver.*;
 import ew.playerData.Commander;
@@ -132,7 +136,7 @@ public final class TestRoom implements Room {
         throw new IllegalArgumentException("Given commanderID " + commanderID + " isn't in this room.");
     }
 
-    public GameStateView getView(long commanderID) {
+    public FullGameStateView getView(long commanderID) {
         if (controller1.getCommander().getPlayerID() == commanderID) return engine.getGameView(SideID.ONE);
         if (controller2.getCommander().getPlayerID() == commanderID) return engine.getGameView(SideID.TWO);
         if (spectators.stream().map(Commander::getPlayerID).anyMatch(c -> c == commanderID))

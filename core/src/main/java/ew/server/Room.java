@@ -1,14 +1,13 @@
 package ew.server;
 
-import ew.engine.board.GameStateView;
-import ew.engine.board.SideID;
-import ew.engine.resolver.*;
+import ew.engine.board.state.GameResult;
+import ew.engine.resolver.log.Log;
+import ew.engine.resolver.log.GameChoice;
+import ew.engine.resolver.log.GameChoiceChange;
+import ew.engine.resolver.view.FullGameStateView;
 import ew.playerData.Commander;
 
-import java.security.SecureRandom;
 import java.util.List;
-import java.util.random.RandomGenerator;
-import java.util.stream.Stream;
 
 public interface Room {
     String toString();
@@ -46,5 +45,5 @@ public interface Room {
 
     List<String> getLog(long commanderID);
 
-    GameStateView getView(long commanderID);
+    FullGameStateView getView(long commanderID);
 }

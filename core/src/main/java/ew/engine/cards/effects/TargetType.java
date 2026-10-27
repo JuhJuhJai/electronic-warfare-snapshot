@@ -42,13 +42,20 @@ public enum TargetType {
     Gamestate, // Used singularly, for something not owned by anything except the match (the current phase, for example)
 
     ZonesOnly,
-    // For effects other than the above, zone targets include the cards in the zones.
+    /// Mainly used for placement effects
+    OnlyAttackZonesOnYourSide,
+    /// Mainly used for placement effects
+    OnlyProductionZonesOnYourSide,
+    // For targets other than the above, zone targets include the cards in the zones.
     FieldZones,
     OccupiedZones,
     OccupyingThisZone, // Targets every card with the same onField position as this card
     UnoccupiedZones,
     ZonesOnYourSide,
     ZonesOnYourOpponentsSide,
+    ZonesYouControl,
+    ZonesYouDontControl,
+
     OpenFieldZones,
     AttackZones,
     FrontlineZones,
@@ -58,13 +65,20 @@ public enum TargetType {
     FarProductionZones,
 
     ZonesAdjacentToThis,
-    ZonesAdjacentToTarget,
     ZonesInThisLane,
     ZonesInThisFile,
+    ZonesInFrontOfThis,
+    ZonesBehindThis,
+    ZonesToTheLeftOfThis,
+    ZonesToTheRightOfThis,
+
+    ZonesAdjacentToTarget,
     ZonesInTargetsLane,
     ZonesInTargetsFile,
-    ZonesYouControl,
-    ZonesYouDontControl,
+    ZonesInFrontOfTarget,
+    ZonesBehindTarget,
+    ZonesToTheLeftOfTarget,
+    ZonesToTheRightOfTarget,
 
     ZonesAdjacentToThisLane, // Excludes the lane "this" is in
     ZonesAdjacentToThisFile, // Excludes the file "this" is in
@@ -118,6 +132,7 @@ public enum TargetType {
     CardsInDestroyedPile,
     CardsInDiscardPile,
     CardsInDisplacedPile,
+    CardsInTheSamePile,
 
     CardsNotOnTheField,
     CardsNotInHand,
@@ -126,6 +141,7 @@ public enum TargetType {
     CardsNotDestroyed,
     CardsNotDiscarded,
     CardsNotDisplaced,
+    CardsNotInTheSamePile,
 
     CardsThatCanMoveForwards,
     CardsThatCanMoveBackwards,
@@ -136,6 +152,9 @@ public enum TargetType {
 
     CardsWithSpaceToBePlaced,
     CardsWithSpaceToBePlacedAfterUse,
+
+    // Named Targets
+    OpenMindToken,
 
     // Things that could potentially apply to cards as well as zones
     Revealed,
@@ -162,9 +181,11 @@ public enum TargetType {
     // Placement cost checks
     PlacementCostIsMet, // by the user of the checked card
 
-    // For cards that are used by an effect that places cards.
-    // Cards that can be used are stored in the target of the card that places cards.
+    /// For cards that are used by an effect that places cards.
+    /// Cards that can be used are stored in the target of the card that places cards.
     CurrentlyUsable,
+    /// For cards that do something to a previous target, refers to a non-implicit target
+    LastSuccessfulTarget, // E.g. place a card, and if you do, this card rides that placed card
 
     // PlacementCostCanBeMet excludes the card that would be placed from using itself.
     PlacementCostCanBeMetByUsersFieldCards,
@@ -205,6 +226,7 @@ public enum TargetType {
     canGainMaterial,
     canDraw; // Is true even with an empty deck. Draw effects instead deal damage.
 
+    /** Returns true if the target is a pattern target. */
     public static boolean isPatternTarget(TargetType check) {
         return check.ordinal() <= 48; // This is fine because nothing will ever go behind the 48 targetType.
     }

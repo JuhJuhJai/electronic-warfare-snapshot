@@ -1,5 +1,8 @@
 package ew.engine.board;
 
+import ew.engine.board.cardInstance.CardRideState;
+import ew.engine.board.state.Field;
+
 import java.util.Objects;
 
 /**
@@ -59,21 +62,33 @@ public class Position {
         );
     }
 
+    private Position(int lane, int file, CardRideState rideState, BoardLocation location) {
+        this.lane = lane;
+        this.file = file;
+        this.fieldState = rideState;
+        this.location = location;
+    }
+
+    public static Position COMMANDER_ONE() {
+        return new Position(0, 0, CardRideState.NORMAL, BoardLocation.COMMANDER_ONE);
+    }
+
+    public static Position COMMANDER_TWO() {
+        return new Position(0, 0, CardRideState.NORMAL, BoardLocation.COMMANDER_TWO);
+    }
+
     /** Use for on field positions. Lanes and Files that are out of bounds are set to the proper FieldState. */
-    public Position(int lane, int file, CardRideState cardRideState) {
-        Position p = resolveFieldPosition(lane, file, cardRideState);
-        this.lane = p.lane;
-        this.file = p.file;
-        this.location = p.location;
-        this.fieldState = p.fieldState;
+    public static Position Field(int lane, int file, CardRideState cardRideState) {
+        return resolveFieldPosition(lane, file, cardRideState);
     }
 
     /** Use for off field positions. */
-    public Position(BoardLocation location, CardRideState state, int pilePosition) {
-        this.location = location;
-        this.fieldState = state;
-        this.lane = pilePosition;
-        this.file = 0;
+    public static Position Pile(BoardLocation location, CardRideState state, int pilePosition) {
+        return new Position(pilePosition, 0, state, location);
+    }
+
+    public static Position FieldChange(Position position, CardRideState newRideState) {
+        return new Position(position.lane, position.file, newRideState, position.location);
     }
 
     public static Position resolveFieldPosition(Position tryPos) {
@@ -120,20 +135,5 @@ public class Position {
             fieldState = cardRideState;
         }
         return new Position(lane, file, fieldState, location);
-    }
-
-    private Position(int lane, int file, CardRideState rideState, BoardLocation location) {
-        this.lane = lane;
-        this.file = file;
-        this.fieldState = rideState;
-        this.location = location;
-    }
-
-    public static Position COMMANDER_ONE() {
-        return new Position(BoardLocation.COMMANDER_ONE, CardRideState.NORMAL, 0);
-    }
-
-    public static Position COMMANDER_TWO() {
-        return new Position(BoardLocation.COMMANDER_TWO, CardRideState.NORMAL, 0);
     }
 }

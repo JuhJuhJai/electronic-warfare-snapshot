@@ -9,23 +9,49 @@ import java.util.stream.Stream;
 
 public class EffectChange {
     final EffectChangeType type;
-    final List<TargetType> stipulations;
+    final List<TargetType> targetTypes;
     final VariableGameNum strength;
     final List<Condition> changeCondition;
     final EffectDuration duration;
 
     public List<Condition> getChangeConditions() { return changeCondition; }
     public EffectChangeType getType() { return type; }
-    public List<TargetType> getTargetRequirements() { return stipulations; }
+    public List<TargetType> getTargetRequirements() { return targetTypes; }
     public VariableGameNum getStrength() { return strength; }
     public EffectDuration getDuration() { return duration; }
+    public String toString() {
+        List<String> conditions = changeCondition.stream().map(Object::toString).toList();
+        List<String> targets = targetTypes.stream().map(Object::toString).toList();
+        StringBuilder builder = new StringBuilder();
+        builder.append(type.toString()).append(" ").append(strength.toString()).append(" "); // Always append type and strength
+        if (!conditions.isEmpty()) { // It has conditions
+            builder.append("(Conditions: ");
+            for (int i = 0; i < conditions.size(); i++) {
+                builder.append(conditions.get(i));
+                if (i < conditions.size() - 1) builder.append(", ");
+            }
+            builder.append(")");
+        }
+        if (!targets.isEmpty()) { // It has targets
+            builder.append(" on ");
+            for (int i = 0; i < targets.size(); i++) {
+                builder.append(conditions.get(i));
+                if (i < conditions.size() - 1) builder.append(" && ");
+            }
+        }
+        else builder.append(" on the GameState");
+        if (duration.getTicksOn().get(0).getType() != ConditionType.TRUE) { // Then it has a duration
+            builder.append(" for ").append(duration);
+        }
+        return builder.toString();
+    }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof EffectChange other)) return false;
         return this.type == other.type
-            && this.stipulations == other.stipulations
+            && this.targetTypes == other.targetTypes
             && this.strength == other.strength
             && this.duration == other.duration
             && this.changeCondition == other.changeCondition;
@@ -33,13 +59,13 @@ public class EffectChange {
 
     @Override
     public int hashCode() {
-        return Objects.hash(type, stipulations, stipulations, duration, changeCondition);
+        return Objects.hash(type, targetTypes, targetTypes, duration, changeCondition);
     }
 
-    protected EffectChange(List<Condition> changeCondition, EffectChangeType type, List<TargetType> stipulations, VariableGameNum strength, EffectDuration duration) {
+    protected EffectChange(List<Condition> changeCondition, EffectChangeType type, List<TargetType> targetTypes, VariableGameNum strength, EffectDuration duration) {
         this.changeCondition = changeCondition;
         this.type = type;
-        this.stipulations = stipulations;
+        this.targetTypes = targetTypes;
         this.strength = strength;
         this.duration = duration;
     }
@@ -48,12 +74,26 @@ public class EffectChange {
         return new EffectChange(List.of(), type, List.of(TargetType.Gamestate), VariableGameNum.ZERO(), EffectDuration.INSTANT());
     }
 
-    public static EffectChange choose(int choices) {
-        return new EffectChange(List.of(), EffectChangeType.Choose, List.of(), VariableGameNum.Num(choices), EffectDuration.INSTANT());
+    public static EffectChange Choose(int choices, int selections) {
+        return switch (selections) {
+            case 1 -> of(EffectChangeType.Choose1, TargetType.Self, VariableGameNum.Num(choices));
+            case 2 -> of(EffectChangeType.Choose2, TargetType.Self, VariableGameNum.Num(choices));
+            case 3 -> of(EffectChangeType.Choose3, TargetType.Self, VariableGameNum.Num(choices));
+            default -> throw new IllegalArgumentException("Case " + selections + " not covered in Choose.");
+        };
     }
 
-    public static EffectChange chooseRandom(int choices) {
-        return new EffectChange(List.of(), EffectChangeType.RandomChoose, List.of(), VariableGameNum.Num(choices), EffectDuration.INSTANT());
+    public static EffectChange ChooseRandom(int choices, int selections) {
+        return switch (selections) {
+            case 1 -> of(EffectChangeType.RandomChoose1, TargetType.Self, VariableGameNum.Num(choices));
+            case 2 -> of(EffectChangeType.RandomChoose2, TargetType.Self, VariableGameNum.Num(choices));
+            case 3 -> of(EffectChangeType.RandomChoose3, TargetType.Self, VariableGameNum.Num(choices));
+            default -> throw new IllegalArgumentException("Case " + selections + " not covered in Choose.");
+        };
+    }
+
+    public static EffectChange DamageTarget(int damage) {
+        return of(EffectChangeType.Damage, TargetType.Target, damage);
     }
 
     public static EffectChange of(EffectChangeType type, List<TargetType> targets, VariableGameNum strength) {
@@ -229,6 +269,20 @@ public class EffectChange {
                 );
             }
 
+            case RemoveCountersFromMaterial -> {
+                return List.of(
+                    Condition.of(ConditionType.HigherThan0Strength, List.of(), minStrength),
+                    Condition.of(ConditionType.CountersAvailable, targets, minStrength)
+                );
+            }
+
+            case RemoveHealthFromMaterial -> {
+                return List.of(
+                    Condition.of(ConditionType.HigherThan0Strength, List.of(), minStrength),
+                    Condition.of(ConditionType.HealthAvailable, targets, minStrength)
+                );
+            }
+
             // Add proper condition types for these
             case MultiTarget, RandomMultiTarget, UniqueTarget, RandomUniqueTarget,
                  TargetAll, AdjacentTarget, AdjacentToOriginalTarget, NonAdjacentTarget,
@@ -246,7 +300,7 @@ public class EffectChange {
                 );
             }
 
-            case Choose, RandomChoose -> {
+            case Choose1, RandomChoose1 -> {
                 return List.of(
                     Condition.of(ConditionType.MinThings, Stream.concat(targets.stream(), Stream.of(TargetType.canChoose)).toList(), 1)
                 );
@@ -411,7 +465,7 @@ public class EffectChange {
                 );
             }
 
-            case ReturnToHand -> {
+            case AddToHand -> {
                 return List.of(
                     Condition.of(ConditionType.HigherThan0Strength, List.of(), minStrength),
                     Condition.of(ConditionType.MinThings, Stream.concat(targets.stream(), Stream.of(TargetType.canAddToHand)).toList(), 1)

@@ -21,12 +21,17 @@ public enum VariableNumType {
     DeclaredDirection,
 
     // Below are types for derived values that may change automatically with the gamestate.
+    // These can be displayed for the player as changing numbers.
     BonusOnOpponentsSide,
     PerUniqueDamagedTarget, // for Piranha
     PerCardThisCardUses,
     MinCardThisCardUses,
     Precision,
 
-    // Below MUST resolve during resolution, as it checks something that can only happen before an EffectChange (others can do both)
+    ThisCardsEnergyCounters,
+
+    // Below MUST resolve during resolution, as it checks something that can only happen during EffectChange
+    // These are just displayed as ?, until the actual resolution
     ThisTargetsOriginalHealth,
+    NumberOfCardsAffectedByLastEffect,
 }
